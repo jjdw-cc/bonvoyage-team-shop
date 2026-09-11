@@ -741,7 +741,7 @@
               <div class="max-w-sm mx-auto space-y-3">
                 <div>
                   <label class="block text-xs text-zinc-600 dark:text-zinc-400 mb-1">用户名</label>
-                  <input id="login-username" type="text" autocomplete="username" placeholder="输入用户名" class="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl px-4 py-2 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" />
+                  <input id="login-username" type="text" autocomplete="username" placeholder="用户名 或 完整邮箱" class="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl px-4 py-2 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" />
                 </div>
                 <div>
                   <label class="block text-xs text-zinc-600 dark:text-zinc-400 mb-1">密码</label>
@@ -936,7 +936,14 @@
       </div>
 
       <div class="border-t border-zinc-100 dark:border-zinc-800 p-3 shrink-0">
+        <div id="ai-attachment-preview" class="hidden mb-2 flex items-center gap-2 px-2 py-1.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-xs"></div>
         <div class="flex items-end gap-2">
+          <input id="ai-file-input" type="file" accept="image/*,application/pdf,text/*,.md,.json,.csv,.log" class="hidden" />
+          <button id="ai-file-btn" type="button" aria-label="上传文件" class="shrink-0 p-2 rounded-xl text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-95 transition-all duration-200">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" />
+            </svg>
+          </button>
           <textarea id="ai-input" rows="1" placeholder="输入问题，Enter 发送..." class="flex-1 min-w-0 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all resize-none"></textarea>
           <button id="ai-send" type="button" class="shrink-0 p-2 rounded-xl bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 active:scale-95 transition-all duration-200 disabled:opacity-50">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -2422,9 +2429,14 @@
         const pwd = loginPassword.value
         if (!raw) { showLoginMessage('请输入用户名', 'error'); loginUsername.focus(); return }
         if (!pwd) { showLoginMessage('请输入密码', 'error'); loginPassword.focus(); return }
-        const username = raw.toLowerCase().replace(/[^a-z0-9._-]/g, '')
-        if (!username) { showLoginMessage('用户名只能包含字母、数字、下划线', 'error'); return }
-        const email = `${username}@${EMAIL_DOMAIN}`
+        let email
+        if (raw.includes('@')) {
+          email = raw.toLowerCase()
+        } else {
+          const username = raw.toLowerCase().replace(/[^a-z0-9._-]/g, '')
+          if (!username) { showLoginMessage('用户名只能包含字母、数字、下划线', 'error'); return }
+          email = `${username}@${EMAIL_DOMAIN}`
+        }
         loginSubmit.disabled = true
         loginSubmit.textContent = '登录中...'
         const { data, error } = await supabase.auth.signInWithPassword({ email, password: pwd })
@@ -2792,11 +2804,83 @@
       let aiHistory = [{ role: 'system', content: SYS_PROMPT }]
       let aiSending = false
       let aiPanelOpen = false
+      let aiPendingFile = null
+
+      const aiFileBtn = document.getElementById('ai-file-btn')
+      const aiFileInput = document.getElementById('ai-file-input')
+      const aiAttachmentPreview = document.getElementById('ai-attachment-preview')
+
+      function renderAiPendingFile() {
+        aiAttachmentPreview.innerHTML = ''
+        if (!aiPendingFile) {
+          aiAttachmentPreview.classList.add('hidden')
+          return
+        }
+        aiAttachmentPreview.classList.remove('hidden')
+        const isImage = (aiPendingFile.type || '').startsWith('image/')
+        if (isImage) {
+          const thumb = document.createElement('img')
+          thumb.src = aiPendingFile.url
+          thumb.alt = aiPendingFile.name
+          thumb.className = 'w-8 h-8 rounded-lg object-cover shrink-0'
+          aiAttachmentPreview.appendChild(thumb)
+        } else {
+          const icon = document.createElement('div')
+          icon.className = 'w-8 h-8 rounded-lg bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center shrink-0'
+          icon.innerHTML = '<svg class="w-4 h-4 text-zinc-600 dark:text-zinc-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9z" /><path d="M13 2v7h7" /></svg>'
+          aiAttachmentPreview.appendChild(icon)
+        }
+        const nameEl = document.createElement('span')
+        nameEl.className = 'flex-1 min-w-0 truncate text-zinc-700 dark:text-zinc-300'
+        nameEl.textContent = aiPendingFile.name
+        aiAttachmentPreview.appendChild(nameEl)
+        const del = document.createElement('button')
+        del.type = 'button'
+        del.setAttribute('aria-label', '移除附件')
+        del.className = 'shrink-0 p-1 rounded-lg text-zinc-500 dark:text-zinc-400 hover:text-red-500 active:scale-95 transition-all duration-200'
+        del.innerHTML = '<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" /></svg>'
+        del.addEventListener('click', () => { aiPendingFile = null; renderAiPendingFile() })
+        aiAttachmentPreview.appendChild(del)
+      }
+
+      async function uploadAiFile(file) {
+        if (!currentUser) {
+          alert('请先登录再上传文件')
+          return
+        }
+        const MAX = 20 * 1024 * 1024
+        if (file.size > MAX) {
+          alert('文件不能超过 20 MB')
+          return
+        }
+        aiFileBtn.disabled = true
+        const safeName = file.name.replace(/[^\w.\-\u4e00-\u9fa5]/g, '_')
+        const path = `ai/${currentUser.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safeName}`
+        const { data, error } = await supabase.storage
+          .from('uploads')
+          .upload(path, file, { cacheControl: '3600', upsert: false, contentType: file.type || 'application/octet-stream' })
+        aiFileBtn.disabled = false
+        if (error) {
+          alert('上传失败：' + error.message)
+          return
+        }
+        const { data: u } = supabase.storage.from('uploads').getPublicUrl(data.path)
+        aiPendingFile = { url: u.publicUrl, name: file.name, type: file.type || '', size: file.size }
+        renderAiPendingFile()
+      }
+
+      aiFileBtn.addEventListener('click', () => aiFileInput.click())
+      aiFileInput.addEventListener('change', () => {
+        const file = aiFileInput.files?.[0]
+        if (!file) return
+        uploadAiFile(file)
+        aiFileInput.value = ''
+      })
 
       function openAiPanel() { aiPanel.classList.remove('hidden'); aiPanelOpen = true; setTimeout(() => aiInput.focus(), 50) }
       function closeAiPanel() { aiPanel.classList.add('hidden'); aiPanelOpen = false }
 
-      function appendAiMessage(role, text) {
+      function appendAiMessage(role, text, imageUrl) {
         const wrap = document.createElement('div')
         wrap.className = 'flex gap-3'
         const avatar = document.createElement('div')
@@ -2815,7 +2899,21 @@
         bubble.className = role === 'user'
           ? 'rounded-2xl px-3 py-2 bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 text-sm max-w-[80%] whitespace-pre-wrap break-words'
           : 'rounded-2xl px-3 py-2 bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 text-sm max-w-[80%] whitespace-pre-wrap break-words'
-        bubble.textContent = text
+        if (text) {
+          const textNode = document.createElement('div')
+          textNode.textContent = text
+          bubble.appendChild(textNode)
+        }
+        if (imageUrl) {
+          const img = document.createElement('img')
+          img.src = imageUrl
+          img.alt = '上传的图片'
+          img.className = 'mt-2 max-w-full max-h-60 rounded-xl object-contain cursor-pointer'
+          img.addEventListener('click', () => {
+            openPreview({ name: '上传的图片', url: imageUrl, category: '图片', size: 0, type: 'image/jpeg' })
+          })
+          bubble.appendChild(img)
+        }
         wrap.appendChild(avatar); wrap.appendChild(bubble)
         aiMessages.appendChild(wrap)
         aiMessages.scrollTop = aiMessages.scrollHeight
@@ -2826,17 +2924,24 @@
 
       async function sendAiMessage() {
         const text = aiInput.value.trim()
-        if (!text || aiSending) return
+        if ((!text && !aiPendingFile) || aiSending) return
         aiSending = true
         aiSend.disabled = true
+        const pendingFileSnapshot = aiPendingFile
+        const userText = text || (pendingFileSnapshot ? `[上传了文件：${pendingFileSnapshot.name}]` : '')
+        const imageUrl = pendingFileSnapshot && (pendingFileSnapshot.type || '').startsWith('image/') ? pendingFileSnapshot.url : null
         aiInput.value = ''
         aiInput.style.height = 'auto'
-        appendAiMessage('user', text)
-        aiHistory.push({ role: 'user', content: text })
+        aiPendingFile = null
+        renderAiPendingFile()
+        appendAiMessage('user', userText, imageUrl)
+        aiHistory.push({ role: 'user', content: userText })
         const bubble = appendAiMessage('assistant', '思考中...')
         let full = ''
         try {
-          const { data, error } = await supabase.functions.invoke('super-responder', { body: { messages: aiHistory, stream: false } })
+          const body = { messages: aiHistory, stream: false }
+          if (pendingFileSnapshot) body.fileUrl = pendingFileSnapshot.url
+          const { data, error } = await supabase.functions.invoke('super-responder', { body })
           if (error) throw error
           if (data?.choices?.[0]?.message?.content) full = data.choices[0].message.content
           else if (data?.error) full = `错误：${stringifyErr(data.error)}`
@@ -2854,6 +2959,8 @@
       function resetAiChat() {
         aiHistory = [{ role: 'system', content: SYS_PROMPT }]
         aiMessages.innerHTML = ''
+        aiPendingFile = null
+        renderAiPendingFile()
         const hello = document.createElement('div')
         hello.className = 'flex gap-3'
         hello.innerHTML = '<div class="shrink-0 w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center overflow-hidden"><img src="whale.png" alt="大肥鱼" class="w-full h-full object-cover" /></div><div class="rounded-2xl px-3 py-2 bg-zinc-100 dark:bg-zinc-800 text-sm text-zinc-900 dark:text-zinc-100 max-w-[80%]">呜哇～我是大肥鱼，有什么能帮你的嘛？</div>'
