@@ -1,0 +1,2864 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>三人协作</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
+            },
+          },
+        },
+      }
+    </script>
+    <style>
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+          transition-duration: 0.01ms !important;
+          animation-duration: 0.01ms !important;
+        }
+      }
+    </style>
+  </head>
+  <body class="bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 antialiased">
+    <div class="flex min-h-screen">
+
+      <!-- 侧边栏 -->
+      <aside id="sidebar" data-collapsed="false" class="group w-52 data-[collapsed=true]:w-14 shrink-0 bg-white dark:bg-zinc-900 border-r border-zinc-100 dark:border-zinc-800 transition-all duration-300 ease-out flex flex-col">
+        <div class="flex items-center gap-2 h-16 px-4 md:px-5 group-data-[collapsed=true]:h-auto group-data-[collapsed=true]:py-3 group-data-[collapsed=true]:px-0 group-data-[collapsed=true]:flex-col group-data-[collapsed=true]:justify-center group-data-[collapsed=true]:gap-3 border-b border-zinc-100 dark:border-zinc-800">
+          <button id="calendar-open" type="button" aria-label="打开日历" class="p-2 rounded-xl text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100 active:scale-95 transition-all duration-200">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <rect x="3" y="4" width="18" height="18" rx="2" />
+              <path d="M16 2v4M8 2v4M3 10h18" />
+            </svg>
+          </button>
+          <button id="friends-open" type="button" aria-label="打开好友" class="p-2 rounded-xl text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100 active:scale-95 transition-all duration-200">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+              <circle cx="9" cy="7" r="4" />
+              <path d="M23 21v-2a4 4 0 00-3-3.87" />
+              <path d="M16 3.13a4 4 0 010 7.75" />
+            </svg>
+          </button>
+          <button id="sidebar-toggle" type="button" aria-label="折叠侧边栏" class="p-2 rounded-xl text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100 active:scale-95 transition-all duration-200 ml-auto group-data-[collapsed=true]:ml-0">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+        </div>
+
+        <nav class="flex-1 p-3 md:p-4 group-data-[collapsed=true]:p-2 flex flex-col gap-4 md:gap-6 group-data-[collapsed=true]:gap-4">
+          <a href="#" data-page="dashboard" data-active="true" class="group/item flex items-center gap-4 rounded-xl px-3 py-2 group-data-[collapsed=true]:justify-center group-data-[collapsed=true]:px-0 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100 active:scale-95 transition-all duration-200 data-[active=true]:bg-zinc-100 dark:data-[active=true]:bg-zinc-800 data-[active=true]:text-zinc-900 dark:data-[active=true]:text-zinc-100">
+            <svg class="w-6 h-6 shrink-0 group-hover/item:scale-110 transition-all duration-200" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M3 12l9-9 9 9" />
+              <path d="M5 10v10h14V10" />
+            </svg>
+            <span class="sidebar-label text-sm group-data-[collapsed=true]:hidden">工作台</span>
+          </a>
+          <a href="#" data-page="projects" data-active="false" class="group/item flex items-center gap-4 rounded-xl px-3 py-2 group-data-[collapsed=true]:justify-center group-data-[collapsed=true]:px-0 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100 active:scale-95 transition-all duration-200 data-[active=true]:bg-zinc-100 dark:data-[active=true]:bg-zinc-800 data-[active=true]:text-zinc-900 dark:data-[active=true]:text-zinc-100">
+            <svg class="w-6 h-6 shrink-0 group-hover/item:scale-110 transition-all duration-200" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+            </svg>
+            <span class="sidebar-label text-sm group-data-[collapsed=true]:hidden">项目</span>
+          </a>
+          <a href="#" data-page="tasks" data-active="false" class="group/item flex items-center gap-4 rounded-xl px-3 py-2 group-data-[collapsed=true]:justify-center group-data-[collapsed=true]:px-0 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100 active:scale-95 transition-all duration-200 data-[active=true]:bg-zinc-100 dark:data-[active=true]:bg-zinc-800 data-[active=true]:text-zinc-900 dark:data-[active=true]:text-zinc-100">
+            <svg class="w-6 h-6 shrink-0 group-hover/item:scale-110 transition-all duration-200" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M9 11l3 3L22 4" />
+              <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />
+            </svg>
+            <span class="sidebar-label text-sm group-data-[collapsed=true]:hidden">任务</span>
+          </a>
+          <a href="#" data-page="files" data-active="false" class="group/item flex items-center gap-4 rounded-xl px-3 py-2 group-data-[collapsed=true]:justify-center group-data-[collapsed=true]:px-0 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100 active:scale-95 transition-all duration-200 data-[active=true]:bg-zinc-100 dark:data-[active=true]:bg-zinc-800 data-[active=true]:text-zinc-900 dark:data-[active=true]:text-zinc-100">
+            <svg class="w-6 h-6 shrink-0 group-hover/item:scale-110 transition-all duration-200" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9z" />
+              <path d="M13 2v7h7" />
+            </svg>
+            <span class="sidebar-label text-sm group-data-[collapsed=true]:hidden">文件</span>
+          </a>
+          <a href="#" data-page="online" data-active="false" class="group/item flex items-center gap-4 rounded-xl px-3 py-2 group-data-[collapsed=true]:justify-center group-data-[collapsed=true]:px-0 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100 active:scale-95 transition-all duration-200 data-[active=true]:bg-zinc-100 dark:data-[active=true]:bg-zinc-800 data-[active=true]:text-zinc-900 dark:data-[active=true]:text-zinc-100">
+            <svg class="w-6 h-6 shrink-0 group-hover/item:scale-110 transition-all duration-200" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <rect x="4" y="4" width="16" height="16" rx="2" />
+              <rect x="9" y="9" width="6" height="6" rx="1" />
+              <path d="M9 1v3M15 1v3M9 20v3M15 20v3M1 9h3M1 15h3M20 9h3M20 15h3" />
+            </svg>
+            <span class="sidebar-label text-sm group-data-[collapsed=true]:hidden">线上操作</span>
+          </a>
+          <a href="https://github.com/your-org/your-repo" target="_blank" rel="noopener noreferrer" class="group/item flex items-center gap-4 rounded-xl px-3 py-2 group-data-[collapsed=true]:justify-center group-data-[collapsed=true]:px-0 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100 active:scale-95 transition-all duration-200">
+            <svg class="w-6 h-6 shrink-0 group-hover/item:scale-110 transition-all duration-200" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12 .5C5.37.5 0 5.87 0 12.5c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58v-2.03c-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.75.08-.73.08-.73 1.21.08 1.84 1.24 1.84 1.24 1.07 1.83 2.81 1.3 3.5 1 .11-.78.42-1.3.76-1.6-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.12-.3-.54-1.52.12-3.17 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 013-.4c1.02 0 2.05.14 3 .4 2.28-1.55 3.29-1.23 3.29-1.23.66 1.65.24 2.87.12 3.17.77.84 1.24 1.91 1.24 3.22 0 4.61-2.8 5.63-5.48 5.92.43.37.81 1.1.81 2.22v3.29c0 .32.22.7.83.58A12 12 0 0024 12.5C24 5.87 18.63.5 12 .5z" />
+            </svg>
+            <span class="sidebar-label text-sm group-data-[collapsed=true]:hidden">仓储</span>
+          </a>
+        </nav>
+
+        <div class="p-3 md:p-4 group-data-[collapsed=true]:p-2 border-t border-zinc-100 dark:border-zinc-800">
+          <div class="flex items-center justify-between gap-4 group-data-[collapsed=true]:flex-col group-data-[collapsed=true]:gap-4">
+            <div id="user-open" role="button" tabindex="0" class="group/item flex items-center gap-4 rounded-xl px-3 py-2 group-data-[collapsed=true]:justify-center group-data-[collapsed=true]:px-0 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all duration-200 cursor-pointer min-w-0">
+              <svg class="w-8 h-8 shrink-0 rounded-full group-hover/item:scale-110 transition-all duration-200" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <circle cx="12" cy="8" r="4" />
+                <path d="M4 21v-1a6 6 0 016-6h4a6 6 0 016 6v1" />
+              </svg>
+              <span id="sidebar-username" class="sidebar-label text-sm text-zinc-600 dark:text-zinc-400 truncate group-data-[collapsed=true]:hidden">未登录</span>
+            </div>
+            <a href="#" aria-label="设置" class="group/item shrink-0 p-2 rounded-xl text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100 active:scale-95 transition-all duration-200">
+              <svg class="w-6 h-6 group-hover/item:scale-110 transition-all duration-200" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="3" />
+                <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06a1.65 1.65 0 001.82.33h.01a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51h.01a1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82v.01a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
+              </svg>
+            </a>
+          </div>
+        </div>
+      </aside>
+
+      <!-- 主内容区 -->
+      <main class="flex-1 p-4 md:p-6 lg:p-8 overflow-y-auto">
+
+        <!-- 工作台 -->
+        <section data-view="dashboard">
+          <div class="mb-6 md:mb-8">
+            <h1 id="dash-greeting" class="font-semibold text-zinc-900 dark:text-zinc-100 text-3xl md:text-4xl mb-2">下午好</h1>
+            <p id="dash-date" class="text-zinc-600 dark:text-zinc-400 text-sm md:text-base">2026 年 9 月 10 日 · 星期四</p>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+            <div class="lg:col-span-2 lg:row-span-2 group rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 p-6 md:p-8 bg-gradient-to-br from-blue-500 to-purple-600 flex flex-col">
+              <div class="flex items-center gap-4 mb-6">
+                <div class="p-3 rounded-xl bg-white/20 group-hover:scale-110 transition-all duration-200">
+                  <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" />
+                  </svg>
+                </div>
+                <h2 class="font-semibold text-white text-xl md:text-2xl">今日重点</h2>
+              </div>
+              <ul id="dash-today-list" class="space-y-4 text-white/90 text-sm md:text-base"></ul>
+              <button id="dash-add-task" type="button" class="mt-auto pt-6 text-left text-white/80 hover:text-white text-sm transition-colors duration-200">+ 添加今日任务</button>
+            </div>
+
+            <div class="lg:col-span-2 group rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 p-6 bg-white dark:bg-zinc-900 flex items-center gap-4 md:gap-6">
+              <div class="p-3 rounded-xl bg-blue-50 dark:bg-blue-900/20 group-hover:scale-110 transition-all duration-200">
+                <svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />
+                </svg>
+              </div>
+              <div>
+                <p id="dash-pending" class="font-semibold text-zinc-900 dark:text-zinc-100 text-3xl md:text-4xl">0</p>
+                <p class="text-zinc-600 dark:text-zinc-400 text-sm">进行中任务</p>
+              </div>
+            </div>
+
+            <div class="group rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 p-6 bg-white dark:bg-zinc-900">
+              <div class="p-3 rounded-xl bg-green-50 dark:bg-green-900/20 group-hover:scale-110 transition-all duration-200 mb-4 w-fit">
+                <svg class="w-6 h-6 text-green-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path d="M20 6L9 17l-5-5" />
+                </svg>
+              </div>
+              <p id="dash-done" class="font-semibold text-zinc-900 dark:text-zinc-100 text-2xl md:text-3xl">0</p>
+              <p class="text-zinc-600 dark:text-zinc-400 text-xs mt-1">已完成</p>
+            </div>
+
+            <div class="group rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 p-6 bg-white dark:bg-zinc-900">
+              <div class="p-3 rounded-xl bg-purple-50 dark:bg-purple-900/20 group-hover:scale-110 transition-all duration-200 mb-4 w-fit">
+                <svg class="w-6 h-6 text-purple-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path d="M4 16l5-5 4 4 7-7" /><path d="M14 8h6v6" />
+                </svg>
+              </div>
+              <p id="dash-reported" class="font-semibold text-zinc-900 dark:text-zinc-100 text-2xl md:text-3xl">0</p>
+              <p class="text-zinc-600 dark:text-zinc-400 text-xs mt-1">已上报</p>
+            </div>
+
+            <div class="lg:col-span-2 group rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 p-6 bg-white dark:bg-zinc-900">
+              <div class="flex items-center gap-4 mb-4">
+                <div class="p-3 rounded-xl bg-purple-50 dark:bg-purple-900/20 group-hover:scale-110 transition-all duration-200">
+                  <svg class="w-6 h-6 text-purple-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path d="M12 8v4l3 3" /><circle cx="12" cy="12" r="10" />
+                  </svg>
+                </div>
+                <h3 class="font-semibold text-zinc-900 dark:text-zinc-100 text-lg md:text-xl">最近动态</h3>
+              </div>
+              <ul id="dash-activity" class="space-y-3 text-sm text-zinc-600 dark:text-zinc-400"></ul>
+            </div>
+
+            <button id="dash-new-task" type="button" class="group text-left rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 p-6 bg-white dark:bg-zinc-900 flex flex-col items-start active:scale-95">
+              <div class="p-3 rounded-xl bg-zinc-100 dark:bg-zinc-800 group-hover:scale-110 transition-all duration-200 mb-4">
+                <svg class="w-6 h-6 text-zinc-700 dark:text-zinc-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
+              </div>
+              <p class="font-semibold text-zinc-900 dark:text-zinc-100 text-base">新建任务</p>
+              <p class="text-zinc-600 dark:text-zinc-400 text-xs mt-1">快速创建</p>
+            </button>
+
+            <div class="group rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 p-6 bg-white dark:bg-zinc-900 flex flex-col items-start cursor-pointer">
+              <div class="p-3 rounded-xl bg-cyan-50 dark:bg-cyan-900/20 group-hover:scale-110 transition-all duration-200 mb-4">
+                <svg class="w-6 h-6 text-cyan-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9z" /><path d="M13 2v7h7" />
+                </svg>
+              </div>
+              <p class="font-semibold text-zinc-900 dark:text-zinc-100 text-base">文件库</p>
+              <p class="text-zinc-600 dark:text-zinc-400 text-xs mt-1">查看全部</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- 项目 -->
+        <section data-view="projects" class="hidden">
+          <div class="flex items-start justify-between gap-4 mb-4 md:mb-6">
+            <div>
+              <h1 class="font-semibold text-zinc-900 dark:text-zinc-100 text-2xl md:text-3xl mb-1">项目</h1>
+              <p id="project-subtitle" class="text-zinc-600 dark:text-zinc-400 text-xs md:text-sm">管理团队研究项目</p>
+            </div>
+            <button id="project-add-open" type="button" class="shrink-0 inline-flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2 rounded-xl font-medium text-sm transition-colors bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 active:scale-95 transition-all duration-200">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+              <span class="hidden sm:inline">新建项目</span>
+            </button>
+          </div>
+
+          <div class="flex flex-col lg:flex-row gap-4 md:gap-6 items-start">
+            <div class="w-full lg:w-72 shrink-0 rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-sm bg-white dark:bg-zinc-900 p-3 md:p-4">
+              <h2 class="font-semibold text-zinc-900 dark:text-zinc-100 text-sm mb-3 px-2">项目列表</h2>
+              <ul id="project-list" class="flex flex-col gap-3 max-h-[60vh] overflow-y-auto"></ul>
+            </div>
+            <div id="project-detail" class="flex-1 min-w-0 w-full rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-sm bg-white dark:bg-zinc-900 p-4 md:p-6"></div>
+          </div>
+        </section>
+
+        <!-- 任务 -->
+        <section data-view="tasks" class="hidden">
+          <div class="mb-6 md:mb-8">
+            <h1 class="font-semibold text-zinc-900 dark:text-zinc-100 text-3xl md:text-4xl mb-2">任务</h1>
+            <p id="task-summary" class="text-zinc-600 dark:text-zinc-400 text-sm md:text-base">共 0 个任务</p>
+          </div>
+
+          <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-4 md:mb-6">
+            <div class="group rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 p-4 bg-white dark:bg-zinc-900 flex items-center gap-3">
+              <div class="p-2 rounded-xl bg-blue-50 dark:bg-blue-900/20 group-hover:scale-110 transition-all duration-200">
+                <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path d="M12 8v4l3 3" /><circle cx="12" cy="12" r="10" />
+                </svg>
+              </div>
+              <div>
+                <p id="stat-pending" class="font-semibold text-zinc-900 dark:text-zinc-100 text-xl md:text-2xl">0</p>
+                <p class="text-zinc-600 dark:text-zinc-400 text-xs">进行中</p>
+              </div>
+            </div>
+            <div class="group rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 p-4 bg-white dark:bg-zinc-900 flex items-center gap-3">
+              <div class="p-2 rounded-xl bg-green-50 dark:bg-green-900/20 group-hover:scale-110 transition-all duration-200">
+                <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path d="M20 6L9 17l-5-5" />
+                </svg>
+              </div>
+              <div>
+                <p id="stat-done" class="font-semibold text-zinc-900 dark:text-zinc-100 text-xl md:text-2xl">0</p>
+                <p class="text-zinc-600 dark:text-zinc-400 text-xs">已完成</p>
+              </div>
+            </div>
+            <div class="group rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 p-4 bg-white dark:bg-zinc-900 flex items-center gap-3">
+              <div class="p-2 rounded-xl bg-purple-50 dark:bg-purple-900/20 group-hover:scale-110 transition-all duration-200">
+                <svg class="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path d="M4 16l5-5 4 4 7-7" /><path d="M14 8h6v6" />
+                </svg>
+              </div>
+              <div>
+                <p id="stat-reported" class="font-semibold text-zinc-900 dark:text-zinc-100 text-xl md:text-2xl">0</p>
+                <p class="text-zinc-600 dark:text-zinc-400 text-xs">已上报</p>
+              </div>
+            </div>
+            <div class="group rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 p-4 bg-white dark:bg-zinc-900 flex items-center gap-3">
+              <div class="p-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 group-hover:scale-110 transition-all duration-200">
+                <svg class="w-5 h-5 text-zinc-700 dark:text-zinc-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path d="M4 6h16M4 12h16M4 18h10" />
+                </svg>
+              </div>
+              <div>
+                <p id="stat-total" class="font-semibold text-zinc-900 dark:text-zinc-100 text-xl md:text-2xl">0</p>
+                <p class="text-zinc-600 dark:text-zinc-400 text-xs">全部</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-3 mb-4 md:mb-6">
+            <div class="relative flex-1 min-w-0">
+              <span class="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 dark:text-zinc-500 pointer-events-none">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <circle cx="11" cy="11" r="7" /><path d="M21 21l-4.35-4.35" />
+                </svg>
+              </span>
+              <input id="task-search" type="text" placeholder="搜索任务或标签..." class="w-full pl-11 pr-4 py-2 md:py-3 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" />
+            </div>
+            <button id="task-add-open" type="button" class="shrink-0 inline-flex items-center gap-2 px-4 py-2 md:px-6 md:py-3 rounded-xl font-medium transition-colors bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 active:scale-95 transition-all duration-200">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+              <span class="hidden sm:inline">添加任务</span>
+            </button>
+          </div>
+
+          <div class="rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-sm p-4 md:p-6 bg-white dark:bg-zinc-900">
+            <ul id="task-list" class="divide-y divide-zinc-100 dark:divide-zinc-800"></ul>
+          </div>
+        </section>
+
+        <!-- 文件 -->
+        <section data-view="files" class="hidden">
+          <div class="flex items-start justify-between gap-4 mb-4 md:mb-6">
+            <div>
+              <h1 class="font-semibold text-zinc-900 dark:text-zinc-100 text-2xl md:text-3xl mb-1">文件</h1>
+              <p id="file-subtitle" class="text-zinc-600 dark:text-zinc-400 text-xs md:text-sm">管理团队文件与存储空间</p>
+            </div>
+            <button id="file-upload-open" type="button" class="shrink-0 inline-flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2 rounded-xl font-medium text-sm transition-colors bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 active:scale-95 transition-all duration-200">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+              <span class="hidden sm:inline">上传</span>
+            </button>
+          </div>
+
+          <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-4 md:mb-6">
+            <div class="col-span-2 row-span-2 group rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 p-4 md:p-5 bg-white dark:bg-zinc-900 flex items-center gap-5">
+              <div class="relative w-24 h-24 md:w-28 md:h-28 shrink-0">
+                <svg class="w-full h-full -rotate-90" viewBox="0 0 200 200">
+                  <circle cx="100" cy="100" r="80" fill="none" stroke-width="16" class="stroke-zinc-100 dark:stroke-zinc-800" />
+                  <circle id="storage-ring" cx="100" cy="100" r="80" fill="none" stroke-width="16" stroke-linecap="round" stroke="#3b82f6" stroke-dasharray="502.65" stroke-dashoffset="502.65" class="transition-all duration-700 ease-out" />
+                </svg>
+                <div class="absolute inset-0 flex items-center justify-center">
+                  <span id="storage-percent" class="font-semibold text-zinc-900 dark:text-zinc-100 text-lg md:text-xl">0%</span>
+                </div>
+              </div>
+              <div class="min-w-0 flex-1">
+                <p class="text-zinc-500 dark:text-zinc-400 text-xs mb-1">已使用</p>
+                <p class="font-semibold text-zinc-900 dark:text-zinc-100 text-lg md:text-xl mb-2"><span id="storage-used">0 MB</span></p>
+                <p class="text-zinc-600 dark:text-zinc-400 text-xs">共 <span id="storage-total">1 GB</span></p>
+                <p class="text-zinc-600 dark:text-zinc-400 text-xs mt-1">剩 <span id="storage-remaining" class="text-blue-500 font-medium">1 GB</span></p>
+              </div>
+            </div>
+
+            <div class="group rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 p-4 bg-white dark:bg-zinc-900 flex items-center gap-3">
+              <div class="p-2 rounded-xl bg-blue-50 dark:bg-blue-900/20 group-hover:scale-110 transition-all duration-200 shrink-0">
+                <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9z" /><path d="M13 2v7h7" />
+                </svg>
+              </div>
+              <div class="min-w-0">
+                <p id="file-count" class="font-semibold text-zinc-900 dark:text-zinc-100 text-lg md:text-xl">0</p>
+                <p class="text-zinc-600 dark:text-zinc-400 text-xs">文件</p>
+              </div>
+            </div>
+
+            <div class="group rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 p-4 bg-white dark:bg-zinc-900 flex items-center gap-3">
+              <div class="p-2 rounded-xl bg-purple-50 dark:bg-purple-900/20 group-hover:scale-110 transition-all duration-200 shrink-0">
+                <svg class="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <ellipse cx="12" cy="6" rx="8" ry="3" /><path d="M4 6v6c0 1.66 3.58 3 8 3s8-1.34 8-3V6" /><path d="M4 12v6c0 1.66 3.58 3 8 3s8-1.34 8-3v-6" />
+                </svg>
+              </div>
+              <div class="min-w-0">
+                <p id="db-size" class="font-semibold text-zinc-900 dark:text-zinc-100 text-lg md:text-xl">0 MB</p>
+                <p class="text-zinc-600 dark:text-zinc-400 text-xs">数据库</p>
+              </div>
+            </div>
+          </div>
+
+          <div id="file-groups" class="flex flex-col gap-3 md:gap-4"></div>
+        </section>
+
+        <!-- 线上操作 -->
+        <section data-view="online" class="hidden">
+          <div class="mb-6 md:mb-8">
+            <h1 class="font-semibold text-zinc-900 dark:text-zinc-100 text-3xl md:text-4xl mb-2">线上操作</h1>
+            <p class="text-zinc-600 dark:text-zinc-400 text-sm md:text-base">选择开发板，在 Wokwi 中打开在线仿真环境</p>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+            <a href="https://wokwi.com/arduino" target="_blank" rel="noopener noreferrer" class="lg:col-span-2 group rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 p-6 md:p-8 bg-white dark:bg-zinc-900 flex flex-col active:scale-95">
+              <div class="flex items-center gap-4 mb-6">
+                <div class="p-3 rounded-xl bg-cyan-50 dark:bg-cyan-900/20 group-hover:scale-110 transition-all duration-200">
+                  <svg class="w-6 h-6 text-cyan-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <rect x="4" y="4" width="16" height="16" rx="2" /><rect x="9" y="9" width="6" height="6" rx="1" />
+                    <path d="M9 1v3M15 1v3M9 20v3M15 20v3M1 9h3M1 15h3M20 9h3M20 15h3" />
+                  </svg>
+                </div>
+                <h2 class="font-semibold text-zinc-900 dark:text-zinc-100 text-xl md:text-2xl">Arduino</h2>
+              </div>
+              <p class="text-zinc-600 dark:text-zinc-400 text-sm md:text-base mb-6">在浏览器中编写、编译并仿真 Arduino 程序，支持 Uno、Nano、Mega 等常见开发板。</p>
+              <div class="mt-auto flex flex-wrap gap-3">
+                <span class="px-3 py-1 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-xs text-zinc-600 dark:text-zinc-400">Uno</span>
+                <span class="px-3 py-1 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-xs text-zinc-600 dark:text-zinc-400">Nano</span>
+                <span class="px-3 py-1 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-xs text-zinc-600 dark:text-zinc-400">Mega</span>
+              </div>
+              <span class="mt-6 inline-flex items-center gap-3 text-cyan-500 text-sm font-medium">
+                打开 Wokwi
+                <svg class="w-4 h-4 group-hover:translate-x-1 transition-all duration-200" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path d="M5 12h14M13 6l6 6-6 6" />
+                </svg>
+              </span>
+            </a>
+
+            <a href="https://wokwi.com/stm32" target="_blank" rel="noopener noreferrer" class="lg:col-span-2 group rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 p-6 md:p-8 bg-white dark:bg-zinc-900 flex flex-col active:scale-95">
+              <div class="flex items-center gap-4 mb-6">
+                <div class="p-3 rounded-xl bg-purple-50 dark:bg-purple-900/20 group-hover:scale-110 transition-all duration-200">
+                  <svg class="w-6 h-6 text-purple-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <rect x="4" y="4" width="16" height="16" rx="2" /><rect x="9" y="9" width="6" height="6" rx="1" />
+                    <path d="M9 1v3M15 1v3M9 20v3M15 20v3M1 9h3M1 15h3M20 9h3M20 15h3" />
+                  </svg>
+                </div>
+                <h2 class="font-semibold text-zinc-900 dark:text-zinc-100 text-xl md:text-2xl">STM32</h2>
+              </div>
+              <p class="text-zinc-600 dark:text-zinc-400 text-sm md:text-base mb-6">在线仿真 STM32 开发板，支持 Blue Pill、Nucleo 等型号，可直接运行 C 代码。</p>
+              <div class="mt-auto flex flex-wrap gap-3">
+                <span class="px-3 py-1 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-xs text-zinc-600 dark:text-zinc-400">Blue Pill</span>
+                <span class="px-3 py-1 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-xs text-zinc-600 dark:text-zinc-400">Nucleo</span>
+              </div>
+              <span class="mt-6 inline-flex items-center gap-3 text-purple-500 text-sm font-medium">
+                打开 Wokwi
+                <svg class="w-4 h-4 group-hover:translate-x-1 transition-all duration-200" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path d="M5 12h14M13 6l6 6-6 6" />
+                </svg>
+              </span>
+            </a>
+          </div>
+        </section>
+
+      </main>
+    </div>
+
+    <!-- 日历弹窗 -->
+    <div id="calendar-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog">
+      <div id="calendar-backdrop" class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
+      <div class="relative w-full max-w-md rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-lg p-6 max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between gap-4 mb-6">
+          <div class="flex items-center gap-3">
+            <button id="calendar-prev" type="button" class="p-2 rounded-xl text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-95 transition-all duration-200">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6" /></svg>
+            </button>
+            <h2 id="calendar-month-label" class="font-semibold text-zinc-900 dark:text-zinc-100 text-lg md:text-xl">2026 年 9 月</h2>
+            <button id="calendar-next" type="button" class="p-2 rounded-xl text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-95 transition-all duration-200">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6" /></svg>
+            </button>
+          </div>
+          <button id="calendar-close" type="button" class="p-2 rounded-xl text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-95 transition-all duration-200">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" /></svg>
+          </button>
+        </div>
+        <div class="grid grid-cols-7 gap-3 mb-3">
+          <span class="text-center text-xs text-zinc-400">日</span>
+          <span class="text-center text-xs text-zinc-400">一</span>
+          <span class="text-center text-xs text-zinc-400">二</span>
+          <span class="text-center text-xs text-zinc-400">三</span>
+          <span class="text-center text-xs text-zinc-400">四</span>
+          <span class="text-center text-xs text-zinc-400">五</span>
+          <span class="text-center text-xs text-zinc-400">六</span>
+        </div>
+        <div id="calendar-dates" class="grid grid-cols-7 gap-3"></div>
+        <div class="mt-6 pt-6 border-t border-zinc-100 dark:border-zinc-800">
+          <div class="flex items-center gap-4 mb-4">
+            <div class="p-3 rounded-xl bg-blue-50 dark:bg-blue-900/20">
+              <svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" />
+              </svg>
+            </div>
+            <div>
+              <p id="calendar-selected-label" class="font-semibold text-zinc-900 dark:text-zinc-100 text-base">选择一个日期</p>
+              <p id="calendar-selected-count" class="text-zinc-600 dark:text-zinc-400 text-xs">0 个日程</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-3 mb-4">
+            <input id="calendar-input" type="text" placeholder="添加日程..." class="flex-1 min-w-0 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl px-4 py-2 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" />
+            <button id="calendar-add" type="button" class="shrink-0 px-4 py-2 rounded-xl font-medium transition-colors bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 active:scale-95 transition-all duration-200">添加</button>
+          </div>
+          <ul id="calendar-list" class="flex flex-col"></ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- 好友弹窗 -->
+    <div id="friends-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog">
+      <div id="friends-backdrop" class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
+      <div class="relative w-full max-w-lg rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-lg p-6 max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between gap-4 mb-6">
+          <div class="flex items-center gap-4">
+            <div class="p-3 rounded-xl bg-green-50 dark:bg-green-900/20">
+              <svg class="w-6 h-6 text-green-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M23 21v-2a4 4 0 00-3-3.87" />
+                <path d="M16 3.13a4 4 0 010 7.75" />
+              </svg>
+            </div>
+            <h2 class="font-semibold text-zinc-900 dark:text-zinc-100 text-lg md:text-xl">好友</h2>
+          </div>
+          <button id="friends-close" type="button" class="p-2 rounded-xl text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-95 transition-all duration-200">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" /></svg>
+          </button>
+        </div>
+
+        <div class="mb-6">
+          <span class="block text-sm text-zinc-600 dark:text-zinc-400 mb-2">通过用户 ID 添加好友</span>
+          <div class="flex items-center gap-3">
+            <input id="friends-id-input" type="text" placeholder="粘贴对方的用户 ID（UUID）..." class="flex-1 min-w-0 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl px-4 py-2 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" />
+            <button id="friends-add" type="button" class="shrink-0 px-4 py-2 rounded-xl font-medium text-sm bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 active:scale-95 transition-all duration-200">添加</button>
+          </div>
+          <p id="friends-message" class="hidden text-sm mt-2"></p>
+          <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-2">提示：让对方在「用户中心 → 账号」中复制自己的用户 ID 发给你</p>
+        </div>
+
+        <div class="pt-6 border-t border-zinc-100 dark:border-zinc-800">
+          <h3 class="font-semibold text-zinc-900 dark:text-zinc-100 text-sm mb-3">好友列表</h3>
+          <ul id="friends-list" class="flex flex-col gap-3"></ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- 新建项目弹窗 -->
+    <div id="project-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog">
+      <div id="project-backdrop" class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
+      <div class="relative w-full max-w-md rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-lg p-6 max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between gap-4 mb-6">
+          <div class="flex items-center gap-4">
+            <div class="p-3 rounded-xl bg-blue-50 dark:bg-blue-900/20">
+              <svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+              </svg>
+            </div>
+            <h2 class="font-semibold text-zinc-900 dark:text-zinc-100 text-lg md:text-xl">新建项目</h2>
+          </div>
+          <button id="project-close" type="button" class="p-2 rounded-xl text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-95 transition-all duration-200">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" /></svg>
+          </button>
+        </div>
+
+        <label class="block mb-4">
+          <span class="block text-sm text-zinc-600 dark:text-zinc-400 mb-2">项目名称</span>
+          <input id="project-name-input" type="text" placeholder="输入项目名称..." class="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl px-4 py-2 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" />
+        </label>
+
+        <label class="block mb-4">
+          <span class="block text-sm text-zinc-600 dark:text-zinc-400 mb-2">研究方向</span>
+          <input id="project-field-input" type="text" placeholder="例如：嵌入式系统、机器学习..." class="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl px-4 py-2 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" />
+        </label>
+
+        <div class="mb-4">
+          <span class="block text-sm text-zinc-600 dark:text-zinc-400 mb-2">邀请好友</span>
+          <p class="text-xs text-zinc-500 dark:text-zinc-400 mb-2">点击好友头像进行邀请，可多选</p>
+          <div id="project-friend-select" class="flex flex-wrap gap-2 mb-3 max-h-32 overflow-y-auto"></div>
+          <div class="flex items-center gap-3 mb-3">
+            <input id="project-invite-input" type="text" placeholder="或手动输入名称，回车添加" class="flex-1 min-w-0 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl px-4 py-2 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" />
+            <button id="project-invite-add" type="button" class="shrink-0 px-4 py-2 rounded-xl font-medium text-sm bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 hover:bg-zinc-200 dark:hover:bg-zinc-700 active:scale-95 transition-all duration-200">添加</button>
+          </div>
+          <div id="project-invite-list" class="flex flex-wrap gap-3"></div>
+        </div>
+
+        <div class="mb-6">
+          <span class="block text-sm text-zinc-600 dark:text-zinc-400 mb-2">创建时间</span>
+          <p id="project-created-preview" class="text-sm text-zinc-900 dark:text-zinc-100 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl px-4 py-2"></p>
+        </div>
+
+        <p id="project-message" class="hidden text-sm mb-4"></p>
+        <button id="project-submit" type="button" class="w-full px-4 py-2 md:px-6 md:py-3 rounded-xl font-medium transition-colors bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 active:scale-95 transition-all duration-200">创建项目</button>
+      </div>
+    </div>
+
+    <!-- 添加任务弹窗 -->
+    <div id="task-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog">
+      <div id="task-backdrop" class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
+      <div class="relative w-full max-w-md rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-lg p-6 max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between gap-4 mb-6">
+          <div class="flex items-center gap-4">
+            <div class="p-3 rounded-xl bg-blue-50 dark:bg-blue-900/20">
+              <svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></svg>
+            </div>
+            <h2 class="font-semibold text-zinc-900 dark:text-zinc-100 text-lg md:text-xl">添加任务</h2>
+          </div>
+          <button id="task-close" type="button" class="p-2 rounded-xl text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-95 transition-all duration-200">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" /></svg>
+          </button>
+        </div>
+        <label class="block mb-4">
+          <span class="block text-sm text-zinc-600 dark:text-zinc-400 mb-2">任务命名</span>
+          <input id="task-title-input" type="text" placeholder="输入任务名称..." class="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl px-4 py-2 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" />
+        </label>
+        <div class="mb-6">
+          <span class="block text-sm text-zinc-600 dark:text-zinc-400 mb-2">任务标签</span>
+          <div class="flex items-center gap-3 mb-3">
+            <input id="task-tag-input" type="text" placeholder="输入标签，回车添加" class="flex-1 min-w-0 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl px-4 py-2 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" />
+            <button id="task-tag-add" type="button" class="shrink-0 px-4 py-2 rounded-xl font-medium text-sm bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 hover:bg-zinc-200 dark:hover:bg-zinc-700 active:scale-95 transition-all duration-200">添加</button>
+          </div>
+          <div id="task-tag-list" class="flex flex-wrap gap-3"></div>
+        </div>
+        <button id="task-submit" type="button" class="w-full px-4 py-2 md:px-6 md:py-3 rounded-xl font-medium transition-colors bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 active:scale-95 transition-all duration-200">创建任务</button>
+      </div>
+    </div>
+
+    <!-- 上报弹窗 -->
+    <div id="report-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog">
+      <div id="report-backdrop" class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
+      <div class="relative w-full max-w-md rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-lg p-6 max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between gap-4 mb-6">
+          <div class="flex items-center gap-4 min-w-0">
+            <div class="p-3 rounded-xl bg-purple-50 dark:bg-purple-900/20 shrink-0">
+              <svg class="w-6 h-6 text-purple-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />
+              </svg>
+            </div>
+            <div class="min-w-0">
+              <h2 class="font-semibold text-zinc-900 dark:text-zinc-100 text-lg md:text-xl truncate">完成任务上报</h2>
+              <p id="report-task-title" class="text-zinc-600 dark:text-zinc-400 text-xs truncate"></p>
+            </div>
+          </div>
+          <button id="report-close" type="button" class="shrink-0 p-2 rounded-xl text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-95 transition-all duration-200">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" /></svg>
+          </button>
+        </div>
+        <div class="mb-6">
+          <h3 class="font-semibold text-zinc-900 dark:text-zinc-100 text-sm mb-3">历史上报</h3>
+          <div id="report-history" class="flex flex-col gap-4"></div>
+        </div>
+        <div class="pt-6 border-t border-zinc-100 dark:border-zinc-800">
+          <h3 class="font-semibold text-zinc-900 dark:text-zinc-100 text-sm mb-3">新的上报</h3>
+          <textarea id="report-note" rows="3" placeholder="填写完成说明..." class="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl px-4 py-2 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all resize-none mb-3"></textarea>
+          <label for="report-images" class="group/item inline-flex items-center gap-3 px-4 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 text-sm font-medium cursor-pointer hover:bg-zinc-200 dark:hover:bg-zinc-700 active:scale-95 transition-all duration-200">
+            <svg class="w-5 h-5 group-hover/item:scale-110 transition-all duration-200" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="M21 15l-5-5L5 21" />
+            </svg>
+            上传图片
+          </label>
+          <input id="report-images" type="file" accept="image/*" multiple class="hidden" />
+          <div id="report-preview" class="grid grid-cols-3 gap-3 mt-3"></div>
+          <label class="flex items-center gap-3 mt-4 cursor-pointer select-none">
+            <input id="report-done" type="checkbox" checked class="w-4 h-4 rounded-md accent-zinc-900 dark:accent-white" />
+            <span class="text-sm text-zinc-600 dark:text-zinc-400">同时标记为已完成</span>
+          </label>
+          <button id="report-submit" type="button" class="w-full mt-4 px-4 py-2 md:px-6 md:py-3 rounded-xl font-medium transition-colors bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 active:scale-95 transition-all duration-200">提交上报</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 文件上传弹窗 -->
+    <div id="file-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog">
+      <div id="file-backdrop" class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
+      <div class="relative w-full max-w-md rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-lg p-6 max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between gap-4 mb-6">
+          <div class="flex items-center gap-4">
+            <div class="p-3 rounded-xl bg-cyan-50 dark:bg-cyan-900/20">
+              <svg class="w-6 h-6 text-cyan-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" /><path d="M17 8l-5-5-5 5M12 3v12" />
+              </svg>
+            </div>
+            <h2 class="font-semibold text-zinc-900 dark:text-zinc-100 text-lg md:text-xl">上传文件</h2>
+          </div>
+          <button id="file-close" type="button" class="p-2 rounded-xl text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-95 transition-all duration-200">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" /></svg>
+          </button>
+        </div>
+        <label for="file-input" class="group/upload block cursor-pointer rounded-2xl border-2 border-dashed border-zinc-200 dark:border-zinc-700 p-6 text-center hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-all duration-200 mb-4">
+          <div class="flex flex-col items-center">
+            <div class="p-3 rounded-xl bg-zinc-100 dark:bg-zinc-800 group-hover/upload:scale-110 group-hover/upload:bg-blue-100 dark:group-hover/upload:bg-blue-900/30 transition-all duration-200 mb-3">
+              <svg class="w-6 h-6 text-zinc-700 dark:text-zinc-300 group-hover/upload:text-blue-500 transition-colors duration-200" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" /><path d="M17 8l-5-5-5 5M12 3v12" />
+              </svg>
+            </div>
+            <p id="file-selected-name" class="font-medium text-zinc-900 dark:text-zinc-100 text-sm">点击选择文件</p>
+            <p id="file-selected-size" class="text-zinc-500 dark:text-zinc-400 text-xs mt-1">支持任意格式</p>
+          </div>
+        </label>
+        <input id="file-input" type="file" class="hidden" />
+        <div class="mb-6">
+          <span class="block text-sm text-zinc-600 dark:text-zinc-400 mb-2">选择分类</span>
+          <div id="file-category-list" class="flex flex-wrap gap-3"></div>
+        </div>
+        <p id="file-message" class="hidden text-sm mb-4"></p>
+        <button id="file-submit" type="button" class="w-full px-4 py-2 md:px-6 md:py-3 rounded-xl font-medium transition-colors bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 active:scale-95 transition-all duration-200 disabled:opacity-50">上传</button>
+      </div>
+    </div>
+
+    <!-- 用户中心弹窗 -->
+    <div id="user-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog">
+      <div id="user-backdrop" class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
+      <div class="relative w-full max-w-3xl h-[600px] rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-lg overflow-hidden flex">
+
+        <aside class="w-48 shrink-0 bg-zinc-50 dark:bg-zinc-800/50 border-r border-zinc-100 dark:border-zinc-800 flex flex-col">
+          <div class="h-16 flex items-center px-4 border-b border-zinc-100 dark:border-zinc-800">
+            <h2 class="font-semibold text-zinc-900 dark:text-zinc-100 text-base">用户中心</h2>
+          </div>
+          <nav class="flex-1 p-2 flex flex-col gap-2">
+            <button type="button" data-user-page="profile" data-active="true" class="user-nav-item group flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100 active:scale-95 transition-all duration-200 data-[active=true]:bg-white dark:data-[active=true]:bg-zinc-900 data-[active=true]:text-zinc-900 dark:data-[active=true]:text-zinc-100 data-[active=true]:shadow-sm">
+              <svg class="w-4 h-4 shrink-0 group-hover:scale-110 transition-all duration-200" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <circle cx="12" cy="8" r="4" /><path d="M4 21v-1a6 6 0 016-6h4a6 6 0 016 6v1" />
+              </svg>
+              个人资料
+            </button>
+            <button type="button" data-user-page="account" data-active="false" class="user-nav-item group flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100 active:scale-95 transition-all duration-200 data-[active=true]:bg-white dark:data-[active=true]:bg-zinc-900 data-[active=true]:text-zinc-900 dark:data-[active=true]:text-zinc-100 data-[active=true]:shadow-sm">
+              <svg class="w-4 h-4 shrink-0 group-hover:scale-110 transition-all duration-200" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <rect x="3" y="4" width="18" height="16" rx="2" /><path d="M3 10h18M7 15h.01M11 15h.01" />
+              </svg>
+              账号
+            </button>
+          </nav>
+          <div class="p-2 border-t border-zinc-100 dark:border-zinc-800">
+            <button id="user-logout" type="button" class="group w-full flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-zinc-600 dark:text-zinc-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-500 active:scale-95 transition-all duration-200">
+              <svg class="w-4 h-4 shrink-0 group-hover:scale-110 transition-all duration-200" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" /><path d="M16 17l5-5-5-5M21 12H9" />
+              </svg>
+              退出登录
+            </button>
+          </div>
+        </aside>
+
+        <div class="flex-1 min-w-0 flex flex-col">
+          <div class="h-16 flex items-center justify-end px-4 border-b border-zinc-100 dark:border-zinc-800 shrink-0">
+            <button id="user-close" type="button" class="p-2 rounded-xl text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100 active:scale-95 transition-all duration-200">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" /></svg>
+            </button>
+          </div>
+
+          <div class="flex-1 overflow-y-auto p-6">
+            <div id="user-page-login">
+              <div class="flex flex-col items-center justify-center py-12 text-center">
+                <div class="p-4 rounded-2xl bg-blue-50 dark:bg-blue-900/20 mb-6">
+                  <svg class="w-10 h-10 text-blue-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <circle cx="12" cy="8" r="4" /><path d="M4 21v-1a6 6 0 016-6h4a6 6 0 016 6v1" />
+                  </svg>
+                </div>
+                <h3 class="font-semibold text-zinc-900 dark:text-zinc-100 text-lg mb-2">登录以使用完整功能</h3>
+                <p class="text-zinc-600 dark:text-zinc-400 text-sm mb-6 max-w-sm">登录后可以管理个人资料、上传头像、更改昵称</p>
+                <button id="user-github-login" type="button" class="inline-flex items-center justify-center gap-3 px-6 py-3 rounded-xl font-medium bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 active:scale-95 transition-all duration-200">
+                  <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 .5C5.37.5 0 5.87 0 12.5c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58v-2.03c-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.75.08-.73.08-.73 1.21.08 1.84 1.24 1.84 1.24 1.07 1.83 2.81 1.3 3.5 1 .11-.78.42-1.3.76-1.6-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.12-.3-.54-1.52.12-3.17 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 013-.4c1.02 0 2.05.14 3 .4 2.28-1.55 3.29-1.23 3.29-1.23.66 1.65.24 2.87.12 3.17.77.84 1.24 1.91 1.24 3.22 0 4.61-2.8 5.63-5.48 5.92.43.37.81 1.1.81 2.22v3.29c0 .32.22.7.83.58A12 12 0 0024 12.5C24 5.87 18.63.5 12 .5z" />
+                  </svg>
+                  使用 GitHub 登录
+                </button>
+              </div>
+            </div>
+
+            <div id="user-page-profile" class="hidden">
+              <h3 class="font-semibold text-zinc-900 dark:text-zinc-100 text-xl mb-6">个人资料</h3>
+
+              <div class="mb-8">
+                <p class="block text-sm text-zinc-600 dark:text-zinc-400 mb-3">头像</p>
+                <div class="flex items-center gap-4">
+                  <div id="user-avatar-preview" class="w-20 h-20 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center overflow-hidden shrink-0">
+                    <svg class="w-10 h-10 text-zinc-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                      <circle cx="12" cy="8" r="4" /><path d="M4 21v-1a6 6 0 016-6h4a6 6 0 016 6v1" />
+                    </svg>
+                  </div>
+                  <div class="min-w-0">
+                    <button id="user-avatar-change" type="button" class="px-4 py-2 rounded-xl font-medium text-sm bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 hover:bg-zinc-200 dark:hover:bg-zinc-700 active:scale-95 transition-all duration-200">
+                      更换头像
+                    </button>
+                    <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-2">支持 JPG、PNG，不超过 5 MB</p>
+                  </div>
+                </div>
+                <input id="user-avatar-input" type="file" accept="image/*" class="hidden" />
+                <p id="avatar-message" class="hidden text-sm mt-3"></p>
+              </div>
+
+              <div class="mb-6">
+                <label class="block">
+                  <span class="block text-sm text-zinc-600 dark:text-zinc-400 mb-2">昵称</span>
+                  <input id="user-nickname-input" type="text" placeholder="输入昵称..." maxlength="24" class="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl px-4 py-2 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" />
+                </label>
+                <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-2">最多 24 个字符，会显示在侧边栏</p>
+              </div>
+
+              <p id="profile-message" class="hidden text-sm mb-4"></p>
+              <button id="user-save-profile" type="button" class="px-5 py-2 rounded-xl font-medium bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 active:scale-95 transition-all duration-200 text-sm">保存修改</button>
+            </div>
+
+            <div id="user-page-account" class="hidden">
+              <h3 class="font-semibold text-zinc-900 dark:text-zinc-100 text-xl mb-6">账号</h3>
+              <div class="space-y-4">
+                <div>
+                  <p class="text-sm text-zinc-600 dark:text-zinc-400 mb-1">邮箱</p>
+                  <p id="user-account-email" class="text-sm text-zinc-900 dark:text-zinc-100 break-all"></p>
+                </div>
+                <div>
+                  <p class="text-sm text-zinc-600 dark:text-zinc-400 mb-1">用户 ID</p>
+                  <p id="user-account-id" class="text-xs text-zinc-500 dark:text-zinc-400 font-mono break-all"></p>
+                </div>
+                <div>
+                  <p class="text-sm text-zinc-600 dark:text-zinc-400 mb-1">登录方式</p>
+                  <p id="user-account-provider" class="text-sm text-zinc-900 dark:text-zinc-100"></p>
+                </div>
+                <div>
+                  <p class="text-sm text-zinc-600 dark:text-zinc-400 mb-1">注册时间</p>
+                  <p id="user-account-created" class="text-sm text-zinc-900 dark:text-zinc-100"></p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 头像裁剪弹窗 -->
+    <div id="crop-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="裁剪头像">
+      <div id="crop-backdrop" class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+      <div class="relative w-full max-w-md rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-2xl p-6">
+
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="font-semibold text-lg text-zinc-900 dark:text-zinc-100">调整头像</h3>
+          <button id="crop-close" type="button" aria-label="关闭" class="p-2 rounded-xl text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-95 transition-all duration-200">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <p class="text-xs text-zinc-500 dark:text-zinc-400 mb-3">拖动图片调整位置，用滑块缩放</p>
+
+        <div id="crop-stage" class="relative w-full aspect-square rounded-2xl overflow-hidden bg-black cursor-grab active:cursor-grabbing select-none touch-none">
+          <img id="crop-image" class="absolute top-0 left-0 pointer-events-none select-none origin-top-left" draggable="false" alt="待裁剪图片" />
+          <div class="absolute inset-0 rounded-full border-2 border-white/60 pointer-events-none" style="box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.55);"></div>
+        </div>
+
+        <div class="mt-4">
+          <div class="flex items-center justify-between mb-2">
+            <label class="text-sm text-zinc-600 dark:text-zinc-400">缩放</label>
+          </div>
+          <input
+            id="crop-zoom"
+            type="range"
+            min="1"
+            max="3"
+            step="0.01"
+            value="1"
+            class="w-full accent-zinc-900 dark:accent-white"
+          />
+        </div>
+
+        <div class="flex gap-3 mt-6">
+          <button id="crop-cancel" type="button" class="flex-1 px-4 py-2 rounded-xl font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 hover:bg-zinc-200 dark:hover:bg-zinc-700 active:scale-95 transition-all duration-200">
+            取消
+          </button>
+          <button id="crop-confirm" type="button" class="flex-1 px-4 py-2 rounded-xl font-medium bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 active:scale-95 transition-all duration-200 disabled:opacity-50">
+            确定
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 文件预览弹窗 -->
+    <div id="preview-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="文件预览">
+      <div id="preview-backdrop" class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
+      <div class="relative w-full max-w-4xl max-h-[90vh] rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-2xl flex flex-col overflow-hidden">
+
+        <div class="flex items-center justify-between gap-4 px-5 py-3 border-b border-zinc-100 dark:border-zinc-800 shrink-0">
+          <div class="min-w-0 flex-1">
+            <h3 id="preview-name" class="font-semibold text-sm md:text-base text-zinc-900 dark:text-zinc-100 truncate"></h3>
+            <p id="preview-meta" class="text-xs text-zinc-500 dark:text-zinc-400 truncate"></p>
+          </div>
+          <div class="flex items-center gap-2 shrink-0">
+            <a
+              id="preview-download"
+              class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm font-medium bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 active:scale-95 transition-all duration-200"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                <path d="M7 10l5 5 5-5M12 15V3" />
+              </svg>
+              下载
+            </a>
+            <a
+              id="preview-open"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="新标签打开"
+              class="p-2 rounded-xl text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-95 transition-all duration-200"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
+                <path d="M15 3h6v6M10 14L21 3" />
+              </svg>
+            </a>
+            <button
+              id="preview-close"
+              type="button"
+              aria-label="关闭"
+              class="p-2 rounded-xl text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-95 transition-all duration-200"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div id="preview-body" class="flex-1 overflow-auto bg-zinc-50 dark:bg-zinc-950 flex items-center justify-center p-4 min-h-[300px]">
+          <!-- 动态填充 -->
+        </div>
+      </div>
+    </div>
+
+    <!-- 大肥鱼浮动按钮 -->
+    <button id="ai-fab" type="button" aria-label="打开大肥鱼" class="fixed bottom-6 right-6 z-40 w-14 h-14 rounded-full bg-[#4D6BFE] text-white shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all duration-200 flex items-center justify-center overflow-hidden p-0">
+      <img src="whale.png" alt="大肥鱼" class="w-full h-full object-cover" />
+    </button>
+
+    <!-- 大肥鱼弹窗 -->
+    <div id="ai-panel" class="hidden fixed bottom-24 right-6 z-40 w-[calc(100vw-3rem)] sm:w-96 h-[32rem] rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-2xl flex flex-col overflow-hidden" role="dialog" aria-modal="false" aria-label="大肥鱼">
+      <div class="flex items-center justify-between gap-3 px-4 py-3 border-b border-zinc-100 dark:border-zinc-800 shrink-0">
+        <div class="flex items-center gap-3 min-w-0">
+          <div class="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-900/20 shrink-0 flex items-center justify-center overflow-hidden">
+            <img src="whale.png" alt="大肥鱼" class="w-full h-full object-cover" />
+          </div>
+          <div class="min-w-0">
+            <p class="font-semibold text-zinc-900 dark:text-zinc-100 text-sm">大肥鱼</p>
+            <p class="text-zinc-500 dark:text-zinc-400 text-xs">DeepSeek 驱动</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-1 shrink-0">
+          <button id="ai-clear" type="button" aria-label="清空对话" class="p-2 rounded-xl text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-95 transition-all duration-200">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M6 6l1 14a2 2 0 002 2h6a2 2 0 002-2l1-14" />
+            </svg>
+          </button>
+          <button id="ai-close" type="button" aria-label="关闭" class="p-2 rounded-xl text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-95 transition-all duration-200">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div id="ai-messages" class="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
+        <div class="flex gap-3">
+          <div class="shrink-0 w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center overflow-hidden">
+            <img src="whale.png" alt="大肥鱼" class="w-full h-full object-cover" />
+          </div>
+          <div class="rounded-2xl px-3 py-2 bg-zinc-100 dark:bg-zinc-800 text-sm text-zinc-900 dark:text-zinc-100 max-w-[80%]">呜哇～我是大肥鱼，有什么能帮你的嘛？</div>
+        </div>
+      </div>
+
+      <div class="border-t border-zinc-100 dark:border-zinc-800 p-3 shrink-0">
+        <div class="flex items-end gap-2">
+          <textarea id="ai-input" rows="1" placeholder="输入问题，Enter 发送..." class="flex-1 min-w-0 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all resize-none"></textarea>
+          <button id="ai-send" type="button" class="shrink-0 p-2 rounded-xl bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 active:scale-95 transition-all duration-200 disabled:opacity-50">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M5 12h14M13 6l6 6-6 6" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script type="module">
+      import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
+      const supabase = createClient(
+        'https://xmyhgelfuxlvzpxqoaer.supabase.co',
+        'sb_publishable_717gtd0jY6aoeEGx2sAi-Q_DD7tlM9n'
+      )
+
+      const sidebar = document.getElementById('sidebar')
+      const toggle = document.getElementById('sidebar-toggle')
+      const navItems = document.querySelectorAll('[data-page]')
+      const views = document.querySelectorAll('[data-view]')
+      const calendarModal = document.getElementById('calendar-modal')
+      const taskModal = document.getElementById('task-modal')
+      const reportModal = document.getElementById('report-modal')
+      const userModal = document.getElementById('user-modal')
+      const fileModal = document.getElementById('file-modal')
+      const projectModal = document.getElementById('project-modal')
+      const friendsModal = document.getElementById('friends-modal')
+
+      function syncBodyScroll() {
+        const cropModalEl = document.getElementById('crop-modal')
+        const previewModalEl = document.getElementById('preview-modal')
+        const anyOpen =
+          !calendarModal.classList.contains('hidden') ||
+          !taskModal.classList.contains('hidden') ||
+          !reportModal.classList.contains('hidden') ||
+          !userModal.classList.contains('hidden') ||
+          !fileModal.classList.contains('hidden') ||
+          !projectModal.classList.contains('hidden') ||
+          !friendsModal.classList.contains('hidden') ||
+          (cropModalEl && !cropModalEl.classList.contains('hidden')) ||
+          (previewModalEl && !previewModalEl.classList.contains('hidden'))
+        document.body.style.overflow = anyOpen ? 'hidden' : ''
+      }
+
+      toggle.addEventListener('click', () => {
+        const collapsed = sidebar.getAttribute('data-collapsed') === 'true'
+        sidebar.setAttribute('data-collapsed', String(!collapsed))
+      })
+
+      navItems.forEach((item) => {
+        item.addEventListener('click', async (e) => {
+          e.preventDefault()
+          const page = item.dataset.page
+          navItems.forEach((nav) => nav.setAttribute('data-active', String(nav === item)))
+          views.forEach((v) => v.classList.toggle('hidden', v.dataset.view !== page))
+          if (page === 'files') { await loadFiles(); await loadStorageUsage() }
+          if (page === 'projects') { await loadProjects() }
+        })
+      })
+
+      const fmtRel = (ts) => {
+        const d = Date.now() - ts, m = 60000, h = 60 * m, day = 24 * h
+        if (d < m) return '刚刚'
+        if (d < h) return `${Math.floor(d / m)} 分钟前`
+        if (d < day) return `${Math.floor(d / h)} 小时前`
+        if (d < 7 * day) return `${Math.floor(d / day)} 天前`
+        return new Date(ts).toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' })
+      }
+      const fmtBytes = (b) => {
+        if (!b || b <= 0) return '0 B'
+        if (b < 1024) return `${b} B`
+        if (b < 1024 * 1024) return `${(b / 1024).toFixed(1)} KB`
+        if (b < 1024 * 1024 * 1024) return `${(b / 1024 / 1024).toFixed(1)} MB`
+        return `${(b / 1024 / 1024 / 1024).toFixed(2)} GB`
+      }
+      const fmtDateTime = (ts) => new Date(ts).toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+      const escHtml = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c])
+
+      let currentUser = null
+      let tasks = []
+      let schedules = {}
+      let files = []
+      let projects = []
+      let friends = []
+      let activeProjectId = null
+      let draftInvitees = []
+      let keyword = ''
+      let draftTags = []
+
+      /* ===== 文件分类 ===== */
+      const FILE_CATEGORIES = ['文档', '图片', '表格', '代码', '音视频', '压缩包', '其他']
+      const CATEGORY_STYLE = {
+        '文档': { bg: 'bg-blue-50 dark:bg-blue-900/20', fg: 'text-blue-500' },
+        '图片': { bg: 'bg-orange-50 dark:bg-orange-900/20', fg: 'text-orange-500' },
+        '表格': { bg: 'bg-green-50 dark:bg-green-900/20', fg: 'text-green-500' },
+        '代码': { bg: 'bg-purple-50 dark:bg-purple-900/20', fg: 'text-purple-500' },
+        '音视频': { bg: 'bg-cyan-50 dark:bg-cyan-900/20', fg: 'text-cyan-500' },
+        '压缩包': { bg: 'bg-red-50 dark:bg-red-900/20', fg: 'text-red-500' },
+        '其他': { bg: 'bg-zinc-100 dark:bg-zinc-800', fg: 'text-zinc-700 dark:text-zinc-300' },
+      }
+      function guessCategory(filename) {
+        const ext = (filename.split('.').pop() || '').toLowerCase()
+        if (['pdf', 'doc', 'docx', 'txt', 'md', 'rtf', 'odt'].includes(ext)) return '文档'
+        if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'ico'].includes(ext)) return '图片'
+        if (['xls', 'xlsx', 'csv', 'ods'].includes(ext)) return '表格'
+        if (['js', 'ts', 'jsx', 'tsx', 'html', 'css', 'py', 'java', 'c', 'cpp', 'go', 'rs', 'php', 'rb', 'sh', 'json', 'xml', 'yml', 'yaml'].includes(ext)) return '代码'
+        if (['mp4', 'mp3', 'avi', 'mov', 'wav', 'flac', 'mkv', 'webm'].includes(ext)) return '音视频'
+        if (['zip', 'rar', '7z', 'tar', 'gz', 'bz2'].includes(ext)) return '压缩包'
+        return '其他'
+      }
+
+      /* ===== 文件预览 ===== */
+      const previewModal = document.getElementById('preview-modal')
+      const previewBackdrop = document.getElementById('preview-backdrop')
+      const previewClose = document.getElementById('preview-close')
+      const previewName = document.getElementById('preview-name')
+      const previewMeta = document.getElementById('preview-meta')
+      const previewBody = document.getElementById('preview-body')
+      const previewDownload = document.getElementById('preview-download')
+      const previewOpen = document.getElementById('preview-open')
+
+      function isImageFile(file) {
+        if ((file.type || '').startsWith('image/')) return true
+        return /\.(jpg|jpeg|png|gif|webp|svg|bmp|ico)$/i.test(file.name)
+      }
+      function isPdfFile(file) {
+        if ((file.type || '') === 'application/pdf') return true
+        return /\.pdf$/i.test(file.name)
+      }
+      function isTextFile(file) {
+        if ((file.type || '').startsWith('text/')) return true
+        return /\.(txt|md|markdown|json|xml|yml|yaml|html|htm|css|scss|less|js|mjs|cjs|ts|tsx|jsx|py|java|c|cpp|h|hpp|go|rs|php|rb|sh|bash|log|csv|ini|conf|env|sql)$/i.test(file.name)
+      }
+
+      function resetPreviewBody() {
+        previewBody.classList.add('items-center', 'justify-center')
+        previewBody.innerHTML = ''
+      }
+
+      async function openPreview(file) {
+        previewName.textContent = file.name
+        previewMeta.textContent = `${file.category || '其他'} · ${fmtBytes(file.size || 0)}`
+        previewDownload.href = file.url
+        previewDownload.setAttribute('download', file.name)
+        previewOpen.href = file.url
+
+        resetPreviewBody()
+        previewModal.classList.remove('hidden')
+        syncBodyScroll()
+
+        if (isImageFile(file)) {
+          const img = document.createElement('img')
+          img.src = file.url
+          img.alt = file.name
+          img.className = 'max-w-full max-h-full object-contain rounded-xl'
+          previewBody.appendChild(img)
+          return
+        }
+
+        if (isPdfFile(file)) {
+          previewBody.classList.remove('items-center', 'justify-center')
+          const iframe = document.createElement('iframe')
+          iframe.src = file.url
+          iframe.className = 'w-full h-full rounded-xl border-0'
+          iframe.style.minHeight = '70vh'
+          previewBody.appendChild(iframe)
+          return
+        }
+
+        if (isTextFile(file)) {
+          previewBody.classList.remove('items-center', 'justify-center')
+          const wrap = document.createElement('div')
+          wrap.className = 'w-full max-w-3xl bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-100 dark:border-zinc-800 p-4'
+          const pre = document.createElement('pre')
+          pre.className = 'text-xs md:text-sm font-mono whitespace-pre-wrap break-words text-zinc-800 dark:text-zinc-200'
+          pre.textContent = '加载中...'
+          wrap.appendChild(pre)
+          previewBody.appendChild(wrap)
+
+          try {
+            const res = await fetch(file.url)
+            if (!res.ok) throw new Error(`HTTP ${res.status}`)
+            const text = await res.text()
+            const MAX = 200000
+            pre.textContent = text.length > MAX ? text.slice(0, MAX) + '\n\n... (内容过长，已截断，请下载查看完整文件)' : text
+          } catch (err) {
+            pre.textContent = `无法加载文件内容：${err.message}\n\n请点击右上角「下载」或「新标签打开」查看。`
+          }
+          return
+        }
+
+        const wrap = document.createElement('div')
+        wrap.className = 'text-center max-w-sm'
+        wrap.innerHTML =
+          '<div class="p-6 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 inline-block mb-5">' +
+          '<svg class="w-12 h-12 text-zinc-400" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">' +
+          '<path d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9z" />' +
+          '<path d="M13 2v7h7" /></svg></div>' +
+          '<p class="text-sm text-zinc-600 dark:text-zinc-400 mb-5">此文件类型不支持在线预览</p>'
+        const dlBtn = document.createElement('a')
+        dlBtn.href = file.url
+        dlBtn.setAttribute('download', file.name)
+        dlBtn.className = 'inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 text-sm font-medium active:scale-95 transition-all duration-200'
+        dlBtn.innerHTML =
+          '<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">' +
+          '<path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />' +
+          '<path d="M7 10l5 5 5-5M12 15V3" /></svg>下载文件'
+        wrap.appendChild(dlBtn)
+        previewBody.appendChild(wrap)
+      }
+
+      function closePreview() {
+        previewModal.classList.add('hidden')
+        previewBody.innerHTML = ''
+        previewBody.classList.add('items-center', 'justify-center')
+        syncBodyScroll()
+      }
+
+      previewClose.addEventListener('click', closePreview)
+      previewBackdrop.addEventListener('click', closePreview)
+
+      /* ===== 日历 ===== */
+      const calendarOpen = document.getElementById('calendar-open')
+      const calendarClose = document.getElementById('calendar-close')
+      const calendarBackdrop = document.getElementById('calendar-backdrop')
+      const calendarPrev = document.getElementById('calendar-prev')
+      const calendarNext = document.getElementById('calendar-next')
+      const calendarMonthLabel = document.getElementById('calendar-month-label')
+      const calendarDates = document.getElementById('calendar-dates')
+      const calendarSelectedLabel = document.getElementById('calendar-selected-label')
+      const calendarSelectedCount = document.getElementById('calendar-selected-count')
+      const calendarInput = document.getElementById('calendar-input')
+      const calendarAdd = document.getElementById('calendar-add')
+      const calendarList = document.getElementById('calendar-list')
+
+      const toKey = (y, m, d) => `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+      const today = new Date()
+      let calYear = today.getFullYear()
+      let calMonth = today.getMonth()
+      let selectedDateKey = toKey(today.getFullYear(), today.getMonth(), today.getDate())
+
+      async function loadSchedules() {
+        if (!currentUser) { schedules = {}; return }
+        const { data } = await supabase.from('schedules').select('*')
+        schedules = {}
+        ;(data || []).forEach((row) => {
+          if (!schedules[row.date_key]) schedules[row.date_key] = []
+          schedules[row.date_key].push({ id: row.id, content: row.content })
+        })
+      }
+
+      function renderCalendar() {
+        calendarMonthLabel.textContent = `${calYear} 年 ${calMonth + 1} 月`
+        calendarDates.innerHTML = ''
+        const firstDay = new Date(calYear, calMonth, 1).getDay()
+        const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate()
+        for (let i = 0; i < firstDay; i++) {
+          const b = document.createElement('div'); b.className = 'aspect-square'; calendarDates.appendChild(b)
+        }
+        for (let day = 1; day <= daysInMonth; day++) {
+          const key = toKey(calYear, calMonth, day)
+          const isToday = calYear === today.getFullYear() && calMonth === today.getMonth() && day === today.getDate()
+          const isSel = key === selectedDateKey
+          const hasEv = schedules[key]?.length > 0
+          const btn = document.createElement('button')
+          btn.type = 'button'
+          btn.className = 'group/day aspect-square rounded-xl text-sm flex flex-col items-center justify-center relative text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100 active:scale-95 transition-all duration-200'
+          if (isToday && !isSel) btn.className += ' ring-1 ring-blue-500'
+          if (isSel) btn.className += ' bg-blue-400 text-white dark:bg-blue-500'
+          btn.textContent = String(day)
+          if (hasEv) {
+            const dot = document.createElement('span')
+            dot.className = isSel ? 'absolute bottom-1 w-1 h-1 rounded-full bg-white' : 'absolute bottom-1 w-1 h-1 rounded-full bg-blue-500'
+            btn.appendChild(dot)
+          }
+          btn.addEventListener('click', () => { selectedDateKey = key; renderCalendar(); renderSchedules() })
+          calendarDates.appendChild(btn)
+        }
+      }
+
+      function renderSchedules() {
+        const [y, m, d] = selectedDateKey.split('-').map(Number)
+        calendarSelectedLabel.textContent = `${y} 年 ${m} 月 ${d} 日`
+        calendarList.innerHTML = ''
+        const items = schedules[selectedDateKey] || []
+        calendarSelectedCount.textContent = `${items.length} 个日程`
+        if (items.length === 0) {
+          const li = document.createElement('li')
+          li.className = 'text-sm text-zinc-400 dark:text-zinc-500 py-4 text-center'
+          li.textContent = '暂无日程'
+          calendarList.appendChild(li)
+          return
+        }
+        items.forEach((item) => {
+          const li = document.createElement('li')
+          li.className = 'flex items-center justify-between gap-4 py-3 border-b border-zinc-100 dark:border-zinc-800 last:border-b-0'
+          const span = document.createElement('span')
+          span.className = 'text-sm text-zinc-900 dark:text-zinc-100 truncate'
+          span.textContent = item.content
+          const del = document.createElement('button')
+          del.type = 'button'
+          del.setAttribute('aria-label', '删除日程')
+          del.className = 'shrink-0 p-2 rounded-xl text-zinc-400 dark:text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-red-500 active:scale-95 transition-all duration-200'
+          del.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" /></svg>'
+          del.addEventListener('click', async () => {
+            await supabase.from('schedules').delete().eq('id', item.id)
+            await loadSchedules(); renderCalendar(); renderSchedules()
+          })
+          li.appendChild(span); li.appendChild(del); calendarList.appendChild(li)
+        })
+      }
+
+      async function addSchedule() {
+        const value = calendarInput.value.trim()
+        if (!value) return
+        if (!currentUser) { calendarInput.focus(); return }
+        await supabase.from('schedules').insert({ date_key: selectedDateKey, content: value })
+        calendarInput.value = ''
+        await loadSchedules(); renderCalendar(); renderSchedules()
+      }
+      calendarAdd.addEventListener('click', addSchedule)
+      calendarInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addSchedule() } })
+      calendarPrev.addEventListener('click', () => { calMonth -= 1; if (calMonth < 0) { calMonth = 11; calYear -= 1 } renderCalendar() })
+      calendarNext.addEventListener('click', () => { calMonth += 1; if (calMonth > 11) { calMonth = 0; calYear += 1 } renderCalendar() })
+      async function openCalendar() { calendarModal.classList.remove('hidden'); syncBodyScroll(); await loadSchedules(); renderCalendar(); renderSchedules(); calendarInput.focus() }
+      function closeCalendar() { calendarModal.classList.add('hidden'); syncBodyScroll() }
+      calendarOpen.addEventListener('click', openCalendar)
+      calendarClose.addEventListener('click', closeCalendar)
+      calendarBackdrop.addEventListener('click', closeCalendar)
+
+      /* ===== 好友 ===== */
+      const friendsOpen = document.getElementById('friends-open')
+      const friendsClose = document.getElementById('friends-close')
+      const friendsBackdrop = document.getElementById('friends-backdrop')
+      const friendsIdInput = document.getElementById('friends-id-input')
+      const friendsAdd = document.getElementById('friends-add')
+      const friendsMessage = document.getElementById('friends-message')
+      const friendsList = document.getElementById('friends-list')
+
+      const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+      function showFriendsMessage(text, type) {
+        friendsMessage.textContent = text
+        friendsMessage.className = type === 'success'
+          ? 'text-sm mt-2 text-green-500'
+          : 'text-sm mt-2 text-red-500'
+      }
+      function clearFriendsMessage() {
+        friendsMessage.textContent = ''
+        friendsMessage.className = 'hidden text-sm mt-2'
+      }
+
+      async function loadFriends() {
+        if (!currentUser) { friends = []; return }
+        const { data, error } = await supabase.from('friends').select('*')
+        if (error) { friends = []; return }
+        const rows = data || []
+        const otherIds = rows.map((r) => (r.user_id === currentUser.id ? r.friend_id : r.user_id))
+        let profMap = {}
+        if (otherIds.length > 0) {
+          const { data: profs } = await supabase.from('profiles').select('*').in('id', otherIds)
+          ;(profs || []).forEach((p) => { profMap[p.id] = p })
+        }
+        friends = rows.map((r) => {
+          const otherId = r.user_id === currentUser.id ? r.friend_id : r.user_id
+          const p = profMap[otherId] || {}
+          return {
+            id: otherId,
+            nickname: p.nickname || '未知用户',
+            avatar_url: p.avatar_url || null,
+            status: r.status || 'pending',
+            direction: r.user_id === currentUser.id ? 'out' : 'in',
+            recordId: r.id,
+          }
+        })
+      }
+
+      function renderFriends() {
+        friendsList.innerHTML = ''
+        if (!currentUser) {
+          const li = document.createElement('li')
+          li.className = 'text-sm text-zinc-400 dark:text-zinc-500 py-6 text-center'
+          li.textContent = '请先登录'
+          friendsList.appendChild(li)
+          return
+        }
+        if (friends.length === 0) {
+          const li = document.createElement('li')
+          li.className = 'text-sm text-zinc-400 dark:text-zinc-500 py-6 text-center'
+          li.textContent = '还没有好友，试试添加一个吧'
+          friendsList.appendChild(li)
+          return
+        }
+        // 待处理（对方发来的）优先显示
+        const sorted = friends.slice().sort((a, b) => {
+          const w = (x) => (x.status === 'pending' && x.direction === 'in' ? 0 : 1)
+          return w(a) - w(b)
+        })
+        sorted.forEach((f) => {
+          const li = document.createElement('li')
+          li.className = 'flex items-center gap-3 p-3 rounded-xl border border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50'
+
+          const avatar = document.createElement('div')
+          avatar.className = 'w-10 h-10 rounded-full overflow-hidden bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center shrink-0'
+          if (f.avatar_url) {
+            const img = document.createElement('img')
+            img.src = f.avatar_url
+            img.alt = f.nickname
+            img.className = 'w-full h-full object-cover'
+            avatar.appendChild(img)
+          } else {
+            avatar.innerHTML = '<svg class="w-5 h-5 text-zinc-500 dark:text-zinc-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4" /><path d="M4 21v-1a6 6 0 016-6h4a6 6 0 016 6v1" /></svg>'
+          }
+
+          const info = document.createElement('div')
+          info.className = 'flex-1 min-w-0'
+          const nameEl = document.createElement('p')
+          nameEl.className = 'text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate'
+          nameEl.textContent = f.nickname
+          const statusEl = document.createElement('p')
+          statusEl.className = 'text-xs text-zinc-500 dark:text-zinc-400 truncate'
+          if (f.status === 'accepted') statusEl.textContent = '好友'
+          else if (f.status === 'pending' && f.direction === 'out') statusEl.textContent = '等待对方确认'
+          else if (f.status === 'pending' && f.direction === 'in') statusEl.textContent = '请求添加你为好友'
+          else statusEl.textContent = f.status
+          info.appendChild(nameEl)
+          info.appendChild(statusEl)
+
+          const actions = document.createElement('div')
+          actions.className = 'flex items-center gap-2 shrink-0'
+
+          if (f.status === 'pending' && f.direction === 'in') {
+            const acceptBtn = document.createElement('button')
+            acceptBtn.type = 'button'
+            acceptBtn.className = 'px-3 py-1 rounded-xl text-xs font-medium bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 active:scale-95 transition-all duration-200'
+            acceptBtn.textContent = '接受'
+            acceptBtn.addEventListener('click', () => acceptFriend(f))
+
+            const rejectBtn = document.createElement('button')
+            rejectBtn.type = 'button'
+            rejectBtn.className = 'px-3 py-1 rounded-xl text-xs font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 active:scale-95 transition-all duration-200'
+            rejectBtn.textContent = '拒绝'
+            rejectBtn.addEventListener('click', () => rejectFriend(f))
+
+            actions.appendChild(acceptBtn)
+            actions.appendChild(rejectBtn)
+          } else if (f.status === 'accepted') {
+            const removeBtn = document.createElement('button')
+            removeBtn.type = 'button'
+            removeBtn.setAttribute('aria-label', '删除好友')
+            removeBtn.className = 'p-2 rounded-xl text-zinc-400 dark:text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-red-500 active:scale-95 transition-all duration-200'
+            removeBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M6 6l1 14a2 2 0 002 2h6a2 2 0 002-2l1-14" /></svg>'
+            removeBtn.addEventListener('click', () => removeFriend(f))
+            actions.appendChild(removeBtn)
+          } else if (f.status === 'pending' && f.direction === 'out') {
+            const cancelBtn = document.createElement('button')
+            cancelBtn.type = 'button'
+            cancelBtn.className = 'px-3 py-1 rounded-xl text-xs font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 active:scale-95 transition-all duration-200'
+            cancelBtn.textContent = '取消'
+            cancelBtn.addEventListener('click', () => rejectFriend(f))
+            actions.appendChild(cancelBtn)
+          }
+
+          li.appendChild(avatar)
+          li.appendChild(info)
+          li.appendChild(actions)
+          friendsList.appendChild(li)
+        })
+      }
+
+      async function addFriendById(rawId) {
+        if (!currentUser) return
+        const id = rawId.trim()
+        if (!id) return
+        if (id === currentUser.id) {
+          showFriendsMessage('不能添加自己为好友', 'error')
+          return
+        }
+        if (!UUID_RE.test(id)) {
+          showFriendsMessage('用户 ID 格式不正确', 'error')
+          return
+        }
+        if (friends.some((f) => f.id === id)) {
+          showFriendsMessage('已存在好友关系或待确认请求', 'error')
+          return
+        }
+        const { data: prof } = await supabase.from('profiles').select('*').eq('id', id).maybeSingle()
+        if (!prof) {
+          showFriendsMessage('未找到该用户（对方需先登录一次）', 'error')
+          return
+        }
+        const { error } = await supabase.from('friends').insert({
+          user_id: currentUser.id,
+          friend_id: id,
+          status: 'pending',
+        })
+        if (error) {
+          showFriendsMessage(`添加失败：${error.message}`, 'error')
+          return
+        }
+        showFriendsMessage('已发送好友请求', 'success')
+        friendsIdInput.value = ''
+        await loadFriends()
+        renderFriends()
+        renderProjectFriendSelect()
+      }
+
+      async function acceptFriend(f) {
+        await supabase.from('friends').update({ status: 'accepted' }).eq('id', f.recordId)
+        await loadFriends()
+        renderFriends()
+        renderProjectFriendSelect()
+      }
+
+      async function rejectFriend(f) {
+        await supabase.from('friends').delete().eq('id', f.recordId)
+        await loadFriends()
+        renderFriends()
+        renderProjectFriendSelect()
+      }
+
+      async function removeFriend(f) {
+        await supabase.from('friends').delete().eq('id', f.recordId)
+        await loadFriends()
+        renderFriends()
+        renderProjectFriendSelect()
+      }
+
+      function openFriendsModal() {
+        if (!currentUser) { openUserModal(); return }
+        clearFriendsMessage()
+        friendsIdInput.value = ''
+        friendsModal.classList.remove('hidden')
+        syncBodyScroll()
+        loadFriends().then(() => renderFriends())
+        setTimeout(() => friendsIdInput.focus(), 50)
+      }
+      function closeFriendsModal() {
+        friendsModal.classList.add('hidden')
+        syncBodyScroll()
+      }
+
+      friendsOpen.addEventListener('click', openFriendsModal)
+      friendsClose.addEventListener('click', closeFriendsModal)
+      friendsBackdrop.addEventListener('click', closeFriendsModal)
+      friendsAdd.addEventListener('click', () => addFriendById(friendsIdInput.value))
+      friendsIdInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); addFriendById(friendsIdInput.value) }
+      })
+
+      /* ===== 项目 ===== */
+      const projectAddOpen = document.getElementById('project-add-open')
+      const projectClose = document.getElementById('project-close')
+      const projectBackdrop = document.getElementById('project-backdrop')
+      const projectList = document.getElementById('project-list')
+      const projectDetail = document.getElementById('project-detail')
+      const projectSubtitle = document.getElementById('project-subtitle')
+      const projectNameInput = document.getElementById('project-name-input')
+      const projectFieldInput = document.getElementById('project-field-input')
+      const projectInviteInput = document.getElementById('project-invite-input')
+      const projectInviteAdd = document.getElementById('project-invite-add')
+      const projectInviteList = document.getElementById('project-invite-list')
+      const projectFriendSelect = document.getElementById('project-friend-select')
+      const projectCreatedPreview = document.getElementById('project-created-preview')
+      const projectMessage = document.getElementById('project-message')
+      const projectSubmit = document.getElementById('project-submit')
+
+      async function loadProjects() {
+        if (!currentUser) {
+          projects = []
+          activeProjectId = null
+          renderProjects()
+          return
+        }
+        const { data, error } = await supabase.from('projects').select('*').order('created_at', { ascending: false })
+        if (error) {
+          console.error(error.message)
+          projects = []
+        } else {
+          projects = (data || []).map((p) => ({ ...p, invitees: p.invitees || [] }))
+        }
+        if (!projects.some((p) => p.id === activeProjectId)) activeProjectId = projects[0]?.id || null
+        renderProjects()
+      }
+
+      function renderProjects() {
+        projectSubtitle.textContent = currentUser
+          ? (projects.length > 0 ? `共 ${projects.length} 个项目` : '管理团队研究项目')
+          : '管理团队研究项目'
+
+        projectList.innerHTML = ''
+        if (!currentUser) {
+          const li = document.createElement('li')
+          li.className = 'text-sm text-zinc-400 dark:text-zinc-500 py-6 text-center'
+          li.textContent = '请先登录'
+          projectList.appendChild(li)
+        } else if (projects.length === 0) {
+          const li = document.createElement('li')
+          li.className = 'text-sm text-zinc-400 dark:text-zinc-500 py-6 text-center'
+          li.textContent = '暂无项目'
+          projectList.appendChild(li)
+        } else {
+          projects.forEach((p) => {
+            const li = document.createElement('li')
+            const btn = document.createElement('button')
+            btn.type = 'button'
+            const active = p.id === activeProjectId
+            btn.className = 'w-full text-left rounded-xl px-3 py-2 transition-all duration-200 ' +
+              (active ? 'bg-zinc-100 dark:bg-zinc-800' : 'hover:bg-zinc-100 dark:hover:bg-zinc-800')
+            const name = document.createElement('p')
+            name.className = 'text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate'
+            name.textContent = p.name
+            const field = document.createElement('p')
+            field.className = 'text-xs text-zinc-500 dark:text-zinc-400 truncate mt-1'
+            field.textContent = p.research_field || '未填写研究方向'
+            btn.appendChild(name); btn.appendChild(field)
+            btn.addEventListener('click', () => { activeProjectId = p.id; renderProjects() })
+            li.appendChild(btn)
+            projectList.appendChild(li)
+          })
+        }
+
+        renderProjectDetail()
+      }
+
+      function renderProjectDetail() {
+        projectDetail.innerHTML = ''
+        if (!currentUser) {
+          const p = document.createElement('p')
+          p.className = 'text-sm text-zinc-400 dark:text-zinc-500 py-10 text-center'
+          p.textContent = '请先登录以查看项目详情'
+          projectDetail.appendChild(p)
+          return
+        }
+        const proj = projects.find((x) => x.id === activeProjectId)
+        if (!proj) {
+          const p = document.createElement('p')
+          p.className = 'text-sm text-zinc-400 dark:text-zinc-500 py-10 text-center'
+          p.textContent = '选择左侧项目查看详情，或新建一个项目'
+          projectDetail.appendChild(p)
+          return
+        }
+
+        const head = document.createElement('div')
+        head.className = 'flex items-start justify-between gap-4 mb-6'
+        const info = document.createElement('div')
+        info.className = 'min-w-0'
+        const title = document.createElement('h2')
+        title.className = 'font-semibold text-zinc-900 dark:text-zinc-100 text-xl md:text-2xl truncate'
+        title.textContent = proj.name
+        const fieldLine = document.createElement('p')
+        fieldLine.className = 'text-zinc-600 dark:text-zinc-400 text-sm mt-1 truncate'
+        fieldLine.textContent = `研究方向：${proj.research_field || '未填写'}`
+        info.appendChild(title); info.appendChild(fieldLine)
+
+        const delBtn = document.createElement('button')
+        delBtn.type = 'button'
+        delBtn.setAttribute('aria-label', '删除项目')
+        delBtn.className = 'shrink-0 p-2 rounded-xl text-zinc-400 dark:text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-red-500 active:scale-95 transition-all duration-200'
+        delBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M6 6l1 14a2 2 0 002 2h6a2 2 0 002-2l1-14" /></svg>'
+        delBtn.addEventListener('click', async () => {
+          await supabase.from('projects').delete().eq('id', proj.id)
+          projects = projects.filter((x) => x.id !== proj.id)
+          if (activeProjectId === proj.id) activeProjectId = projects[0]?.id || null
+          renderProjects()
+        })
+        head.appendChild(info); head.appendChild(delBtn)
+        projectDetail.appendChild(head)
+
+        const stats = document.createElement('div')
+        stats.className = 'flex flex-wrap gap-6 mb-6'
+        const mkStat = (label, value) => {
+          const box = document.createElement('div')
+          const l = document.createElement('p')
+          l.className = 'text-xs text-zinc-500 dark:text-zinc-400 mb-1'
+          l.textContent = label
+          const v = document.createElement('p')
+          v.className = 'text-sm text-zinc-900 dark:text-zinc-100'
+          v.textContent = value
+          box.appendChild(l); box.appendChild(v)
+          return box
+        }
+        stats.appendChild(mkStat('研究方向', proj.research_field || '未填写'))
+        stats.appendChild(mkStat('创建时间', fmtDateTime(proj.created_at)))
+        stats.appendChild(mkStat('邀请人数', `${(proj.invitees || []).length} 人`))
+        projectDetail.appendChild(stats)
+
+        const inviteSection = document.createElement('div')
+        inviteSection.className = 'pt-6 border-t border-zinc-100 dark:border-zinc-800'
+        const inviteLabel = document.createElement('p')
+        inviteLabel.className = 'text-sm text-zinc-600 dark:text-zinc-400 mb-3'
+        inviteLabel.textContent = '邀请好友'
+        inviteSection.appendChild(inviteLabel)
+        const chipWrap = document.createElement('div')
+        chipWrap.className = 'flex flex-wrap gap-3'
+        const invitees = proj.invitees || []
+        if (invitees.length === 0) {
+          const empty = document.createElement('span')
+          empty.className = 'text-sm text-zinc-400 dark:text-zinc-500'
+          empty.textContent = '暂未邀请好友'
+          chipWrap.appendChild(empty)
+        } else {
+          invitees.forEach((name) => {
+            const chip = document.createElement('span')
+            chip.className = 'px-3 py-1 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-500 text-xs'
+            chip.textContent = name
+            chipWrap.appendChild(chip)
+          })
+        }
+        inviteSection.appendChild(chipWrap)
+        projectDetail.appendChild(inviteSection)
+      }
+
+      function renderDraftInvitees() {
+        projectInviteList.innerHTML = ''
+        draftInvitees.forEach((name, idx) => {
+          const chip = document.createElement('span')
+          chip.className = 'inline-flex items-center gap-3 px-3 py-1 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-500 text-xs'
+          const text = document.createElement('span')
+          text.textContent = name
+          const del = document.createElement('button')
+          del.type = 'button'
+          del.setAttribute('aria-label', '移除邀请')
+          del.className = 'hover:text-red-500 transition-colors duration-200'
+          del.innerHTML = '<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" /></svg>'
+          del.addEventListener('click', () => { draftInvitees.splice(idx, 1); renderDraftInvitees(); renderProjectFriendSelect() })
+          chip.appendChild(text); chip.appendChild(del)
+          projectInviteList.appendChild(chip)
+        })
+      }
+
+      function renderProjectFriendSelect() {
+        projectFriendSelect.innerHTML = ''
+        if (!currentUser) return
+        const accepted = friends.filter((f) => f.status === 'accepted')
+        if (accepted.length === 0) {
+          const p = document.createElement('p')
+          p.className = 'text-xs text-zinc-400 dark:text-zinc-500 py-1'
+          p.textContent = '暂无好友，先在侧边栏「好友」中添加'
+          projectFriendSelect.appendChild(p)
+          return
+        }
+        accepted.forEach((f) => {
+          const selected = draftInvitees.includes(f.nickname)
+          const chip = document.createElement('button')
+          chip.type = 'button'
+          chip.className = selected
+            ? 'inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 active:scale-95 transition-all duration-200'
+            : 'inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 active:scale-95 transition-all duration-200'
+          const av = document.createElement('span')
+          av.className = 'w-4 h-4 rounded-full overflow-hidden bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center shrink-0'
+          if (f.avatar_url) {
+            const img = document.createElement('img')
+            img.src = f.avatar_url
+            img.alt = f.nickname
+            img.className = 'w-full h-full object-cover'
+            av.appendChild(img)
+          }
+          chip.appendChild(av)
+          const txt = document.createElement('span')
+          txt.textContent = f.nickname
+          chip.appendChild(txt)
+          chip.addEventListener('click', () => {
+            const idx = draftInvitees.indexOf(f.nickname)
+            if (idx >= 0) draftInvitees.splice(idx, 1)
+            else draftInvitees.push(f.nickname)
+            renderDraftInvitees()
+            renderProjectFriendSelect()
+          })
+          projectFriendSelect.appendChild(chip)
+        })
+      }
+
+      function addDraftInvitee() {
+        const v = projectInviteInput.value.trim()
+        if (!v) return
+        if (draftInvitees.includes(v)) { projectInviteInput.value = ''; return }
+        draftInvitees.push(v)
+        projectInviteInput.value = ''
+        renderDraftInvitees()
+        renderProjectFriendSelect()
+      }
+      projectInviteAdd.addEventListener('click', addDraftInvitee)
+      projectInviteInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addDraftInvitee() } })
+
+      function openProjectModal() {
+        if (!currentUser) { openUserModal(); return }
+        projectNameInput.value = ''
+        projectFieldInput.value = ''
+        projectInviteInput.value = ''
+        draftInvitees = []
+        renderDraftInvitees()
+        renderProjectFriendSelect()
+        projectCreatedPreview.textContent = fmtDateTime(Date.now())
+        projectMessage.textContent = ''
+        projectMessage.className = 'hidden text-sm mb-4'
+        projectSubmit.disabled = false
+        projectSubmit.textContent = '创建项目'
+        projectModal.classList.remove('hidden')
+        syncBodyScroll()
+        projectNameInput.focus()
+      }
+      function closeProjectModal() {
+        projectModal.classList.add('hidden')
+        syncBodyScroll()
+      }
+
+      projectAddOpen.addEventListener('click', openProjectModal)
+      projectClose.addEventListener('click', closeProjectModal)
+      projectBackdrop.addEventListener('click', closeProjectModal)
+
+      projectSubmit.addEventListener('click', async () => {
+        const name = projectNameInput.value.trim()
+        if (!name) { projectNameInput.focus(); return }
+        const researchField = projectFieldInput.value.trim()
+        projectSubmit.disabled = true
+        projectSubmit.textContent = '创建中...'
+        const { data, error } = await supabase
+          .from('projects')
+          .insert({
+            name,
+            research_field: researchField || null,
+            invitees: draftInvitees.slice(),
+            created_at: new Date().toISOString(),
+          })
+          .select()
+          .single()
+        projectSubmit.disabled = false
+        projectSubmit.textContent = '创建项目'
+        if (error) {
+          projectMessage.textContent = `创建失败：${error.message}`
+          projectMessage.className = 'text-sm mb-4 text-red-500'
+          return
+        }
+        projects.unshift({ ...data, invitees: data.invitees || [] })
+        activeProjectId = data.id
+        renderProjects()
+        closeProjectModal()
+      })
+      projectNameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); projectSubmit.click() } })
+
+      /* ===== 任务 ===== */
+      const taskSummary = document.getElementById('task-summary')
+      const taskSearch = document.getElementById('task-search')
+      const taskAddOpen = document.getElementById('task-add-open')
+      const taskList = document.getElementById('task-list')
+      const statPending = document.getElementById('stat-pending')
+      const statDone = document.getElementById('stat-done')
+      const statReported = document.getElementById('stat-reported')
+      const statTotal = document.getElementById('stat-total')
+      const taskModalEl = document.getElementById('task-modal')
+      const taskClose = document.getElementById('task-close')
+      const taskBackdrop = document.getElementById('task-backdrop')
+      const taskTitleInput = document.getElementById('task-title-input')
+      const taskTagInput = document.getElementById('task-tag-input')
+      const taskTagAdd = document.getElementById('task-tag-add')
+      const taskTagList = document.getElementById('task-tag-list')
+      const taskSubmit = document.getElementById('task-submit')
+      const dashGreeting = document.getElementById('dash-greeting')
+      const dashDate = document.getElementById('dash-date')
+      const dashTodayList = document.getElementById('dash-today-list')
+      const dashPending = document.getElementById('dash-pending')
+      const dashDone = document.getElementById('dash-done')
+      const dashReported = document.getElementById('dash-reported')
+      const dashActivity = document.getElementById('dash-activity')
+      const dashAddTask = document.getElementById('dash-add-task')
+      const dashNewTask = document.getElementById('dash-new-task')
+
+      async function loadTasks() {
+        if (!currentUser) { tasks = []; return }
+        const { data } = await supabase.from('tasks').select('*').order('created_at', { ascending: false })
+        tasks = (data || []).map((t) => ({ ...t, tags: t.tags || [], reports: t.reports || [] }))
+      }
+
+      function countStats() {
+        return {
+          pending: tasks.filter((t) => !t.done).length,
+          done: tasks.filter((t) => t.done).length,
+          reported: tasks.filter((t) => t.reports?.length > 0).length,
+          total: tasks.length,
+        }
+      }
+
+      function updateStats() {
+        const { pending, done, reported, total } = countStats()
+        statPending.textContent = String(pending)
+        statDone.textContent = String(done)
+        statReported.textContent = String(reported)
+        statTotal.textContent = String(total)
+        taskSummary.textContent = `共 ${total} 个任务，${pending} 个进行中`
+      }
+
+      function renderDashboard() {
+        const { pending, done, reported } = countStats()
+        const now = new Date()
+        const h = now.getHours()
+        let g = '你好'
+        if (h < 6) g = '凌晨好'
+        else if (h < 12) g = '早上好'
+        else if (h < 14) g = '中午好'
+        else if (h < 18) g = '下午好'
+        else g = '晚上好'
+        dashGreeting.textContent = pending > 0 ? `${g}，今天有 ${pending} 件事要做` : `${g}，今天没有待办`
+        dashDate.textContent = now.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })
+        dashTodayList.innerHTML = ''
+        const focus = tasks.filter((t) => !t.done).slice(0, 4)
+        if (focus.length === 0) {
+          const li = document.createElement('li')
+          li.innerHTML = '<span class="text-white/70 text-sm">今日暂无待办</span>'
+          dashTodayList.appendChild(li)
+        } else {
+          focus.forEach((t) => {
+            const li = document.createElement('li')
+            li.className = 'flex items-start gap-3'
+            li.innerHTML = `<span class="mt-1 w-2 h-2 rounded-full bg-white/70 shrink-0"></span><span>${escHtml(t.title)}</span>`
+            dashTodayList.appendChild(li)
+          })
+        }
+        dashPending.textContent = String(pending)
+        dashDone.textContent = String(done)
+        dashReported.textContent = String(reported)
+        dashActivity.innerHTML = ''
+        const activities = []
+        tasks.forEach((t) => { (t.reports || []).forEach((r) => activities.push({ title: t.title, time: r.time })) })
+        activities.sort((a, b) => b.time - a.time)
+        const recent = activities.slice(0, 3)
+        if (recent.length === 0) {
+          const li = document.createElement('li')
+          li.textContent = '暂无动态'
+          dashActivity.appendChild(li)
+        } else {
+          recent.forEach((item) => {
+            const li = document.createElement('li')
+            li.className = 'flex justify-between gap-4'
+            li.innerHTML = `<span class="truncate">上报了「${escHtml(item.title)}」</span><span class="text-zinc-400 dark:text-zinc-500 text-xs shrink-0">${fmtRel(item.time)}</span>`
+            dashActivity.appendChild(li)
+          })
+        }
+      }
+
+      function matchesKeyword(t) {
+        if (!keyword) return true
+        const k = keyword.toLowerCase()
+        if (t.title.toLowerCase().includes(k)) return true
+        return (t.tags || []).some((tag) => tag.toLowerCase().includes(k))
+      }
+
+      function createTagChip(text) {
+        const c = document.createElement('span')
+        c.className = 'px-2 py-0.5 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-500 text-xs whitespace-nowrap'
+        c.textContent = text
+        return c
+      }
+
+      function renderTasks() {
+        taskList.innerHTML = ''
+        const visible = tasks.filter(matchesKeyword)
+        if (visible.length === 0) {
+          const empty = document.createElement('li')
+          empty.className = 'text-sm text-zinc-400 dark:text-zinc-500 py-6 text-center'
+          empty.textContent = keyword ? '没有匹配的任务' : currentUser ? '暂无任务，添加一个吧' : '请先登录'
+          taskList.appendChild(empty); updateStats(); renderDashboard(); return
+        }
+        visible.forEach((task) => {
+          const li = document.createElement('li')
+          li.className = 'flex items-center justify-between gap-3 py-3'
+          const left = document.createElement('div')
+          left.className = 'flex items-center gap-3 min-w-0 flex-1'
+          const dot = document.createElement('span')
+          dot.className = task.done ? 'w-2 h-2 rounded-full bg-green-500 shrink-0' : 'w-2 h-2 rounded-full bg-blue-500 shrink-0'
+          const title = document.createElement('span')
+          title.className = task.done ? 'text-sm text-zinc-400 dark:text-zinc-500 truncate line-through' : 'text-sm text-zinc-900 dark:text-zinc-100 truncate'
+          title.textContent = task.title
+          left.appendChild(dot); left.appendChild(title)
+          if (task.tags?.length > 0) {
+            const wrap = document.createElement('div')
+            wrap.className = 'flex items-center gap-3 shrink-0'
+            task.tags.forEach((t) => wrap.appendChild(createTagChip(t)))
+            left.appendChild(wrap)
+          }
+          if (task.reports?.length > 0) {
+            const badge = document.createElement('span')
+            badge.className = 'shrink-0 px-2 py-0.5 rounded-lg bg-purple-50 dark:bg-purple-900/20 text-purple-500 text-xs whitespace-nowrap'
+            badge.textContent = `已上报 ${task.reports.length}`
+            left.appendChild(badge)
+          }
+          const actions = document.createElement('div')
+          actions.className = 'flex items-center gap-3 shrink-0'
+          const rBtn = document.createElement('button')
+          rBtn.type = 'button'
+          rBtn.className = 'px-4 py-2 rounded-xl font-medium text-sm text-zinc-900 dark:text-zinc-100 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 active:scale-95 transition-all duration-200'
+          rBtn.textContent = '上报'
+          rBtn.addEventListener('click', () => openReport(task.id))
+          const dBtn = document.createElement('button')
+          dBtn.type = 'button'
+          dBtn.setAttribute('aria-label', '删除任务')
+          dBtn.className = 'p-2 rounded-xl text-zinc-400 dark:text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-red-500 active:scale-95 transition-all duration-200'
+          dBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M6 6l1 14a2 2 0 002 2h6a2 2 0 002-2l1-14" /></svg>'
+          dBtn.addEventListener('click', async () => {
+            await supabase.from('tasks').delete().eq('id', task.id)
+            tasks = tasks.filter((t) => t.id !== task.id)
+            renderTasks()
+          })
+          actions.appendChild(rBtn); actions.appendChild(dBtn)
+          li.appendChild(left); li.appendChild(actions)
+          taskList.appendChild(li)
+        })
+        updateStats(); renderDashboard()
+      }
+
+      taskSearch.addEventListener('input', () => { keyword = taskSearch.value.trim(); renderTasks() })
+
+      function renderDraftTags() {
+        taskTagList.innerHTML = ''
+        draftTags.forEach((tag, idx) => {
+          const chip = document.createElement('span')
+          chip.className = 'inline-flex items-center gap-3 px-3 py-1 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-500 text-xs'
+          const text = document.createElement('span')
+          text.textContent = tag
+          const del = document.createElement('button')
+          del.type = 'button'
+          del.setAttribute('aria-label', '移除标签')
+          del.className = 'hover:text-red-500 transition-colors duration-200'
+          del.innerHTML = '<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" /></svg>'
+          del.addEventListener('click', () => { draftTags.splice(idx, 1); renderDraftTags() })
+          chip.appendChild(text); chip.appendChild(del); taskTagList.appendChild(chip)
+        })
+      }
+
+      function addDraftTag() {
+        const v = taskTagInput.value.trim()
+        if (!v) return
+        if (draftTags.includes(v)) { taskTagInput.value = ''; return }
+        draftTags.push(v); taskTagInput.value = ''; renderDraftTags()
+      }
+      taskTagAdd.addEventListener('click', addDraftTag)
+      taskTagInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addDraftTag() } })
+
+      function openTaskModal() {
+        if (!currentUser) { openUserModal(); return }
+        taskTitleInput.value = ''; taskTagInput.value = ''
+        draftTags = []; renderDraftTags()
+        taskModalEl.classList.remove('hidden'); syncBodyScroll(); taskTitleInput.focus()
+      }
+      function closeTaskModal() { taskModalEl.classList.add('hidden'); syncBodyScroll() }
+
+      taskAddOpen.addEventListener('click', openTaskModal)
+      taskClose.addEventListener('click', closeTaskModal)
+      taskBackdrop.addEventListener('click', closeTaskModal)
+      dashAddTask.addEventListener('click', openTaskModal)
+      dashNewTask.addEventListener('click', openTaskModal)
+
+      taskSubmit.addEventListener('click', async () => {
+        const title = taskTitleInput.value.trim()
+        if (!title) { taskTitleInput.focus(); return }
+        taskSubmit.disabled = true
+        const { data, error } = await supabase.from('tasks').insert({ title, tags: draftTags.slice(), done: false, reports: [] }).select().single()
+        taskSubmit.disabled = false
+        if (error) return
+        tasks.unshift({ ...data, tags: data.tags || [], reports: data.reports || [] })
+        renderTasks(); closeTaskModal()
+      })
+      taskTitleInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); taskSubmit.click() } })
+
+      /* ===== 上报 ===== */
+      const reportClose = document.getElementById('report-close')
+      const reportBackdrop = document.getElementById('report-backdrop')
+      const reportTaskTitle = document.getElementById('report-task-title')
+      const reportHistory = document.getElementById('report-history')
+      const reportNote = document.getElementById('report-note')
+      const reportImages = document.getElementById('report-images')
+      const reportPreview = document.getElementById('report-preview')
+      const reportDone = document.getElementById('report-done')
+      const reportSubmit = document.getElementById('report-submit')
+      let currentTaskId = null
+      let pendingImages = []
+
+      function compressImage(file) {
+        return new Promise((res) => {
+          const reader = new FileReader()
+          reader.onload = (ev) => {
+            const img = new Image()
+            img.onload = () => {
+              const maxW = 1200
+              let w = img.width, h = img.height
+              if (w > maxW) { h = Math.round((h * maxW) / w); w = maxW }
+              const canvas = document.createElement('canvas')
+              canvas.width = w; canvas.height = h
+              canvas.getContext('2d').drawImage(img, 0, 0, w, h)
+              canvas.toBlob((b) => res(b), 'image/jpeg', 0.8)
+            }
+            img.src = ev.target.result
+          }
+          reader.readAsDataURL(file)
+        })
+      }
+
+      function renderPreview() {
+        reportPreview.innerHTML = ''
+        pendingImages.forEach((item, idx) => {
+          const wrap = document.createElement('div')
+          wrap.className = 'relative group/img'
+          const img = document.createElement('img')
+          img.src = item.previewUrl
+          img.alt = '待上传图片'
+          img.className = 'w-full aspect-square object-cover rounded-xl border border-zinc-100 dark:border-zinc-800'
+          const del = document.createElement('button')
+          del.type = 'button'
+          del.setAttribute('aria-label', '移除图片')
+          del.className = 'absolute -top-2 -right-2 p-1 rounded-full bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-sm active:scale-95 transition-all duration-200'
+          del.innerHTML = '<svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" /></svg>'
+          del.addEventListener('click', () => {
+            URL.revokeObjectURL(item.previewUrl)
+            pendingImages.splice(idx, 1)
+            renderPreview()
+          })
+          wrap.appendChild(img); wrap.appendChild(del); reportPreview.appendChild(wrap)
+        })
+      }
+
+      function renderReportHistory(task) {
+        reportHistory.innerHTML = ''
+        if (!task.reports?.length) {
+          const p = document.createElement('p')
+          p.className = 'text-sm text-zinc-400 dark:text-zinc-500 py-2'
+          p.textContent = '暂无上报记录'
+          reportHistory.appendChild(p)
+          return
+        }
+        task.reports.slice().reverse().forEach((r) => {
+          const item = document.createElement('div')
+          item.className = 'rounded-2xl border border-zinc-100 dark:border-zinc-800 p-4 bg-zinc-50 dark:bg-zinc-800/50'
+          const meta = document.createElement('div')
+          meta.className = 'flex items-center justify-between gap-3 mb-2'
+          const time = document.createElement('span')
+          time.className = 'text-xs text-zinc-400 dark:text-zinc-500'
+          time.textContent = new Date(r.time).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+          meta.appendChild(time); item.appendChild(meta)
+          if (r.note) {
+            const note = document.createElement('p')
+            note.className = 'text-sm text-zinc-900 dark:text-zinc-100 whitespace-pre-wrap break-words mb-2'
+            note.textContent = r.note
+            item.appendChild(note)
+          }
+          if (r.images?.length > 0) {
+            const grid = document.createElement('div')
+            grid.className = 'grid grid-cols-3 gap-3'
+            r.images.forEach((src) => {
+              const img = document.createElement('img')
+              img.src = src
+              img.alt = '上报图片'
+              img.className = 'w-full aspect-square object-cover rounded-xl border border-zinc-100 dark:border-zinc-800 cursor-pointer hover:opacity-90 transition-opacity'
+              img.addEventListener('click', () => {
+                openPreview({ name: '上报图片', url: src, category: '图片', size: 0, type: 'image/jpeg' })
+              })
+              grid.appendChild(img)
+            })
+            item.appendChild(grid)
+          }
+          reportHistory.appendChild(item)
+        })
+      }
+
+      function openReport(taskId) {
+        const task = tasks.find((t) => t.id === taskId)
+        if (!task) return
+        currentTaskId = taskId
+        pendingImages = []
+        reportTaskTitle.textContent = task.title
+        reportNote.value = ''
+        reportDone.checked = true
+        reportImages.value = ''
+        renderPreview(); renderReportHistory(task)
+        reportModal.classList.remove('hidden'); syncBodyScroll(); reportNote.focus()
+      }
+      function closeReport() { reportModal.classList.add('hidden'); syncBodyScroll() }
+
+      reportClose.addEventListener('click', closeReport)
+      reportBackdrop.addEventListener('click', closeReport)
+
+      reportImages.addEventListener('change', async (e) => {
+        const list = Array.from(e.target.files || [])
+        for (const file of list) {
+          if (!file.type.startsWith('image/')) continue
+          const blob = await compressImage(file)
+          pendingImages.push({ blob, previewUrl: URL.createObjectURL(blob) })
+        }
+        reportImages.value = ''
+        renderPreview()
+      })
+
+      reportSubmit.addEventListener('click', async () => {
+        const task = tasks.find((t) => t.id === currentTaskId)
+        if (!task) return
+        const note = reportNote.value.trim()
+        if (!note && pendingImages.length === 0) { reportNote.focus(); return }
+        reportSubmit.disabled = true
+        reportSubmit.textContent = '上传中...'
+        const urls = []
+        for (const item of pendingImages) {
+          const path = `task-${task.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`
+          const { data, error } = await supabase.storage.from('uploads').upload(path, item.blob, { cacheControl: '3600', upsert: false, contentType: 'image/jpeg' })
+          if (!error) {
+            const { data: u } = supabase.storage.from('uploads').getPublicUrl(data.path)
+            urls.push(u.publicUrl)
+          }
+        }
+        const reports = task.reports || []
+        reports.push({ id: 'r' + Date.now(), note, images: urls, time: Date.now() })
+        const patch = { reports }
+        if (reportDone.checked) patch.done = true
+        const { data, error } = await supabase.from('tasks').update(patch).eq('id', task.id).select().single()
+        reportSubmit.disabled = false
+        reportSubmit.textContent = '提交上报'
+        if (error) return
+        const i = tasks.findIndex((t) => t.id === task.id)
+        if (i >= 0) tasks[i] = { ...data, tags: data.tags || [], reports: data.reports || [] }
+        pendingImages.forEach((item) => URL.revokeObjectURL(item.previewUrl))
+        pendingImages = []
+        renderTasks(); closeReport()
+      })
+
+      /* ===== 文件 ===== */
+      const storageRing = document.getElementById('storage-ring')
+      const storagePercent = document.getElementById('storage-percent')
+      const storageUsed = document.getElementById('storage-used')
+      const storageTotal = document.getElementById('storage-total')
+      const storageRemaining = document.getElementById('storage-remaining')
+      const dbSizeEl = document.getElementById('db-size')
+      const fileGroups = document.getElementById('file-groups')
+      const fileCountEl = document.getElementById('file-count')
+      const fileSubtitle = document.getElementById('file-subtitle')
+      const fileUploadOpen = document.getElementById('file-upload-open')
+      const fileClose = document.getElementById('file-close')
+      const fileBackdrop = document.getElementById('file-backdrop')
+      const fileInput = document.getElementById('file-input')
+      const fileSelectedName = document.getElementById('file-selected-name')
+      const fileSelectedSize = document.getElementById('file-selected-size')
+      const fileCategoryList = document.getElementById('file-category-list')
+      const fileMessage = document.getElementById('file-message')
+      const fileSubmit = document.getElementById('file-submit')
+
+      const RING_R = 80
+      const RING_CIRC = 2 * Math.PI * RING_R
+      const STORAGE_LIMIT = 1024 * 1024 * 1024
+      let pendingFile = null
+      let pendingCategory = '其他'
+
+      async function loadFiles() {
+        if (!currentUser) { files = []; renderFiles(); updateFileStats(); return }
+        const { data } = await supabase.from('files').select('*').order('created_at', { ascending: false })
+        files = data || []
+        renderFiles(); updateFileStats()
+      }
+
+      function updateFileStats() {
+        const total = files.reduce((s, f) => s + (f.size || 0), 0)
+        const ratio = Math.min(total / STORAGE_LIMIT, 1)
+        const offset = RING_CIRC * (1 - ratio)
+        storageRing.style.strokeDasharray = String(RING_CIRC)
+        storageRing.style.strokeDashoffset = String(offset)
+        storagePercent.textContent = `${Math.round(ratio * 100)}%`
+        storageUsed.textContent = fmtBytes(total)
+        storageTotal.textContent = '1 GB'
+        storageRemaining.textContent = fmtBytes(Math.max(STORAGE_LIMIT - total, 0))
+        fileCountEl.textContent = String(files.length)
+        fileSubtitle.textContent = files.length > 0 ? `共 ${files.length} 个文件，占用 ${fmtBytes(total)}` : '管理团队文件与存储空间'
+      }
+
+      function renderFiles() {
+        fileGroups.innerHTML = ''
+        if (!currentUser) {
+          const empty = document.createElement('div')
+          empty.className = 'rounded-2xl border border-zinc-100 dark:border-zinc-800 p-8 bg-white dark:bg-zinc-900 text-center'
+          empty.innerHTML = '<p class="text-sm text-zinc-400 dark:text-zinc-500">请先登录以查看文件</p>'
+          fileGroups.appendChild(empty)
+          return
+        }
+        if (files.length === 0) {
+          const empty = document.createElement('div')
+          empty.className = 'rounded-2xl border border-zinc-100 dark:border-zinc-800 p-8 bg-white dark:bg-zinc-900 text-center'
+          empty.innerHTML = '<p class="text-sm text-zinc-400 dark:text-zinc-500 mb-2">暂无文件</p><p class="text-xs text-zinc-400 dark:text-zinc-500">点击右上角「上传」开始</p>'
+          fileGroups.appendChild(empty)
+          return
+        }
+        const groups = {}
+        files.forEach((f) => {
+          const cat = f.category || '其他'
+          if (!groups[cat]) groups[cat] = []
+          groups[cat].push(f)
+        })
+        FILE_CATEGORIES.forEach((cat) => {
+          const items = groups[cat]
+          if (!items?.length) return
+          const style = CATEGORY_STYLE[cat] || CATEGORY_STYLE['其他']
+          const section = document.createElement('div')
+          section.className = 'rounded-2xl border border-zinc-100 dark:border-zinc-800 p-3 md:p-4 bg-white dark:bg-zinc-900'
+          const header = document.createElement('div')
+          header.className = 'flex items-center gap-3 mb-3'
+          const iconWrap = document.createElement('div')
+          iconWrap.className = `p-2 rounded-xl ${style.bg}`
+          iconWrap.innerHTML = `<div class="w-5 h-5 ${style.fg}"><svg class="w-full h-full" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9z" /><path d="M13 2v7h7" /></svg></div>`
+          const titleWrap = document.createElement('div')
+          titleWrap.className = 'flex-1 min-w-0'
+          titleWrap.innerHTML = `<h3 class="font-semibold text-zinc-900 dark:text-zinc-100 text-sm md:text-base">${cat}</h3><p class="text-zinc-600 dark:text-zinc-400 text-xs">${items.length} 个文件</p>`
+          header.appendChild(iconWrap); header.appendChild(titleWrap); section.appendChild(header)
+          const list = document.createElement('ul')
+          list.className = 'divide-y divide-zinc-100 dark:divide-zinc-800'
+          items.forEach((file) => {
+            const li = document.createElement('li')
+            li.className = 'flex items-center justify-between gap-3 py-2'
+            const left = document.createElement('div')
+            left.className = 'flex items-center gap-3 min-w-0 flex-1'
+
+            const nameEl = document.createElement('button')
+            nameEl.type = 'button'
+            nameEl.className = 'text-sm text-zinc-900 dark:text-zinc-100 truncate hover:text-blue-500 transition-colors duration-200 text-left'
+            nameEl.textContent = file.name
+            nameEl.title = '点击预览'
+            nameEl.addEventListener('click', () => openPreview(file))
+            left.appendChild(nameEl)
+
+            const actions = document.createElement('div')
+            actions.className = 'flex items-center gap-2 shrink-0'
+
+            const size = document.createElement('span')
+            size.className = 'text-xs text-zinc-400 dark:text-zinc-500 whitespace-nowrap mr-1'
+            size.textContent = fmtBytes(file.size || 0)
+
+            const previewBtn = document.createElement('button')
+            previewBtn.type = 'button'
+            previewBtn.setAttribute('aria-label', '预览')
+            previewBtn.className = 'p-2 rounded-xl text-zinc-400 dark:text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-blue-500 active:scale-95 transition-all duration-200'
+            previewBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>'
+            previewBtn.addEventListener('click', () => openPreview(file))
+
+            const dlBtn = document.createElement('a')
+            dlBtn.href = file.url
+            dlBtn.setAttribute('download', file.name)
+            dlBtn.setAttribute('aria-label', '下载')
+            dlBtn.className = 'p-2 rounded-xl text-zinc-400 dark:text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-blue-500 active:scale-95 transition-all duration-200'
+            dlBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" /><path d="M7 10l5 5 5-5M12 15V3" /></svg>'
+
+            const delBtn = document.createElement('button')
+            delBtn.type = 'button'
+            delBtn.setAttribute('aria-label', '删除文件')
+            delBtn.className = 'p-2 rounded-xl text-zinc-400 dark:text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-red-500 active:scale-95 transition-all duration-200'
+            delBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M6 6l1 14a2 2 0 002 2h6a2 2 0 002-2l1-14" /></svg>'
+            delBtn.addEventListener('click', async () => {
+              await supabase.storage.from('uploads').remove([file.path])
+              await supabase.from('files').delete().eq('id', file.id)
+              files = files.filter((f) => f.id !== file.id)
+              renderFiles(); updateFileStats()
+            })
+
+            actions.appendChild(size)
+            actions.appendChild(previewBtn)
+            actions.appendChild(dlBtn)
+            actions.appendChild(delBtn)
+            li.appendChild(left); li.appendChild(actions); list.appendChild(li)
+          })
+          section.appendChild(list); fileGroups.appendChild(section)
+        })
+      }
+
+      function renderFileCategories() {
+        fileCategoryList.innerHTML = ''
+        FILE_CATEGORIES.forEach((cat) => {
+          const style = CATEGORY_STYLE[cat] || CATEGORY_STYLE['其他']
+          const isA = cat === pendingCategory
+          const chip = document.createElement('button')
+          chip.type = 'button'
+          chip.textContent = cat
+          chip.className = isA ? `px-3 py-1 rounded-xl ${style.bg} ${style.fg} text-xs font-medium active:scale-95 transition-all duration-200 ring-2 ring-blue-500/20` : 'px-3 py-1 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 text-xs hover:bg-zinc-200 dark:hover:bg-zinc-700 active:scale-95 transition-all duration-200'
+          chip.addEventListener('click', () => { pendingCategory = cat; renderFileCategories() })
+          fileCategoryList.appendChild(chip)
+        })
+      }
+
+      function openFileModal() {
+        if (!currentUser) { openUserModal(); return }
+        pendingFile = null; fileInput.value = ''
+        fileSelectedName.textContent = '点击选择文件'
+        fileSelectedSize.textContent = '支持任意格式'
+        fileMessage.textContent = ''; fileMessage.className = 'hidden text-sm mb-4'
+        fileSubmit.disabled = true
+        pendingCategory = '其他'; renderFileCategories()
+        fileModal.classList.remove('hidden'); syncBodyScroll()
+      }
+      function closeFileModal() { fileModal.classList.add('hidden'); syncBodyScroll() }
+
+      fileUploadOpen.addEventListener('click', openFileModal)
+      fileClose.addEventListener('click', closeFileModal)
+      fileBackdrop.addEventListener('click', closeFileModal)
+
+      fileInput.addEventListener('change', () => {
+        const file = fileInput.files?.[0]
+        if (!file) return
+        pendingFile = file
+        fileSelectedName.textContent = file.name
+        fileSelectedSize.textContent = fmtBytes(file.size)
+        pendingCategory = guessCategory(file.name)
+        renderFileCategories()
+        fileSubmit.disabled = false
+      })
+
+      fileSubmit.addEventListener('click', async () => {
+        if (!pendingFile) return
+        fileSubmit.disabled = true; fileSubmit.textContent = '上传中...'
+        const safeName = pendingFile.name.replace(/[^\w.\-\u4e00-\u9fa5]/g, '_')
+        const path = `files/${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safeName}`
+        const { data: ud, error: ue } = await supabase.storage.from('uploads').upload(path, pendingFile, { cacheControl: '3600', upsert: false, contentType: pendingFile.type || 'application/octet-stream' })
+        if (ue) { fileSubmit.disabled = false; fileSubmit.textContent = '上传'; fileMessage.textContent = `上传失败：${ue.message}`; fileMessage.className = 'text-sm mb-4 text-red-500'; return }
+        const { data: u } = supabase.storage.from('uploads').getPublicUrl(ud.path)
+        const { data: row, error: de } = await supabase.from('files').insert({ name: pendingFile.name, category: pendingCategory, path: ud.path, url: u.publicUrl, size: pendingFile.size, type: pendingFile.type || null }).select().single()
+        fileSubmit.disabled = false; fileSubmit.textContent = '上传'
+        if (de) { fileMessage.textContent = `保存失败：${de.message}`; fileMessage.className = 'text-sm mb-4 text-red-500'; return }
+        files.unshift(row); renderFiles(); updateFileStats(); closeFileModal()
+      })
+
+      async function loadStorageUsage() {
+        if (!currentUser) return
+        const { data, error } = await supabase.rpc('get_db_size')
+        if (error) return
+        dbSizeEl.textContent = fmtBytes(data)
+      }
+
+      /* ===== 用户中心 ===== */
+      const userOpen = document.getElementById('user-open')
+      const userClose = document.getElementById('user-close')
+      const userBackdrop = document.getElementById('user-backdrop')
+      const userLoginView = document.getElementById('user-page-login')
+      const userProfileView = document.getElementById('user-page-profile')
+      const userAccountView = document.getElementById('user-page-account')
+      const userNavItems = document.querySelectorAll('[data-user-page]')
+      const userGithubLogin = document.getElementById('user-github-login')
+      const userLogout = document.getElementById('user-logout')
+      const sidebarUsername = document.getElementById('sidebar-username')
+      const userAvatarPreview = document.getElementById('user-avatar-preview')
+      const userAvatarInput = document.getElementById('user-avatar-input')
+      const userNicknameInput = document.getElementById('user-nickname-input')
+      const userSaveProfile = document.getElementById('user-save-profile')
+      const avatarMessage = document.getElementById('avatar-message')
+      const profileMessage = document.getElementById('profile-message')
+      const userAccountEmail = document.getElementById('user-account-email')
+      const userAccountId = document.getElementById('user-account-id')
+      const userAccountProvider = document.getElementById('user-account-provider')
+      const userAccountCreated = document.getElementById('user-account-created')
+
+      const getDisplayName = (u) => u ? (u.user_metadata?.nickname || u.user_metadata?.user_name || u.user_metadata?.name || u.email || '用户') : '未登录'
+      const getAvatarUrl = (u) => u?.user_metadata?.avatar_url || null
+
+      async function upsertProfile() {
+        if (!currentUser) return
+        await supabase.from('profiles').upsert({
+          id: currentUser.id,
+          nickname: getDisplayName(currentUser),
+          avatar_url: getAvatarUrl(currentUser),
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'id' })
+      }
+
+      function renderSidebarAvatar() {
+        const url = getAvatarUrl(currentUser)
+        const icon = document.querySelector('#user-open > svg')
+        if (!icon) return
+        if (url) {
+          const existing = document.getElementById('sidebar-avatar-img')
+          if (existing) { existing.src = url; return }
+          icon.classList.add('hidden')
+          const img = document.createElement('img')
+          img.id = 'sidebar-avatar-img'
+          img.src = url
+          img.alt = '头像'
+          img.className = 'w-8 h-8 shrink-0 rounded-full object-cover group-hover/item:scale-110 transition-all duration-200'
+          icon.parentElement.insertBefore(img, icon)
+        } else {
+          icon.classList.remove('hidden')
+          document.getElementById('sidebar-avatar-img')?.remove()
+        }
+      }
+
+      function updateSidebarUser() {
+        sidebarUsername.textContent = currentUser ? getDisplayName(currentUser) : '未登录'
+        renderSidebarAvatar()
+      }
+
+      function renderAvatarPreview() {
+        const url = getAvatarUrl(currentUser)
+        if (url) {
+          userAvatarPreview.innerHTML = ''
+          const img = document.createElement('img')
+          img.src = url
+          img.alt = '头像'
+          img.className = 'w-full h-full object-cover'
+          userAvatarPreview.appendChild(img)
+        } else {
+          userAvatarPreview.innerHTML = '<svg class="w-10 h-10 text-zinc-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4" /><path d="M4 21v-1a6 6 0 016-6h4a6 6 0 016 6v1" /></svg>'
+        }
+      }
+
+      function fillProfileForm() {
+        if (!currentUser) return
+        userNicknameInput.value = currentUser.user_metadata?.nickname || currentUser.user_metadata?.user_name || currentUser.user_metadata?.name || ''
+        renderAvatarPreview()
+      }
+
+      function fillAccountView() {
+        if (!currentUser) return
+        userAccountEmail.textContent = currentUser.email || '未设置'
+        userAccountId.textContent = currentUser.id || '-'
+        userAccountProvider.textContent = currentUser.app_metadata?.provider || '未知'
+        userAccountCreated.textContent = currentUser.created_at ? new Date(currentUser.created_at).toLocaleString('zh-CN') : '-'
+      }
+
+      function setUserPage(page) {
+        userNavItems.forEach((b) => b.setAttribute('data-active', String(b.dataset.userPage === page)))
+        userProfileView.classList.toggle('hidden', page !== 'profile')
+        userAccountView.classList.toggle('hidden', page !== 'account')
+        if (page === 'profile') fillProfileForm()
+        if (page === 'account') fillAccountView()
+      }
+
+      function renderUserModal() {
+        const logged = Boolean(currentUser)
+        userLoginView.classList.toggle('hidden', logged)
+        if (logged) setUserPage('profile')
+        else { userProfileView.classList.add('hidden'); userAccountView.classList.add('hidden') }
+      }
+
+      function openUserModal() { renderUserModal(); userModal.classList.remove('hidden'); syncBodyScroll() }
+      function closeUserModal() { userModal.classList.add('hidden'); syncBodyScroll() }
+
+      userOpen.addEventListener('click', openUserModal)
+      userOpen.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openUserModal() }
+      })
+      userClose.addEventListener('click', closeUserModal)
+      userBackdrop.addEventListener('click', closeUserModal)
+      userNavItems.forEach((b) => b.addEventListener('click', () => setUserPage(b.dataset.userPage)))
+
+      /* ===== 头像裁剪 ===== */
+      const cropModal = document.getElementById('crop-modal')
+      const cropBackdrop = document.getElementById('crop-backdrop')
+      const cropClose = document.getElementById('crop-close')
+      const cropCancel = document.getElementById('crop-cancel')
+      const cropConfirm = document.getElementById('crop-confirm')
+      const cropStage = document.getElementById('crop-stage')
+      const cropImage = document.getElementById('crop-image')
+      const cropZoom = document.getElementById('crop-zoom')
+      const userAvatarChange = document.getElementById('user-avatar-change')
+
+      let cropState = null
+      let cropDrag = null
+
+      userAvatarChange.addEventListener('click', () => {
+        userAvatarInput.click()
+      })
+
+      userAvatarInput.addEventListener('change', () => {
+        const file = userAvatarInput.files?.[0]
+        if (!file) return
+        if (!file.type.startsWith('image/')) {
+          avatarMessage.textContent = '请选择图片文件'
+          avatarMessage.className = 'text-sm mt-3 text-red-500'
+          userAvatarInput.value = ''
+          return
+        }
+        if (file.size > 5 * 1024 * 1024) {
+          avatarMessage.textContent = '图片不能超过 5 MB'
+          avatarMessage.className = 'text-sm mt-3 text-red-500'
+          userAvatarInput.value = ''
+          return
+        }
+        const reader = new FileReader()
+        reader.onload = (ev) => openCropModal(ev.target.result)
+        reader.readAsDataURL(file)
+        userAvatarInput.value = ''
+      })
+
+      function applyCropTransform() {
+        if (!cropState) return
+        const totalScale = cropState.baseScale * cropState.scale
+        const w = cropState.imgW * totalScale
+        const h = cropState.imgH * totalScale
+        cropImage.style.width = w + 'px'
+        cropImage.style.height = h + 'px'
+        cropImage.style.transform = `translate(${cropState.x}px, ${cropState.y}px)`
+      }
+
+      function openCropModal(src) {
+        cropModal.classList.remove('hidden')
+        syncBodyScroll()
+        cropImage.onload = () => {
+          const stageSize = cropStage.clientWidth
+          const imgW = cropImage.naturalWidth
+          const imgH = cropImage.naturalHeight
+          const baseScale = Math.max(stageSize / imgW, stageSize / imgH)
+          cropState = {
+            stageSize,
+            imgW,
+            imgH,
+            baseScale,
+            scale: 1,
+            x: (stageSize - imgW * baseScale) / 2,
+            y: (stageSize - imgH * baseScale) / 2,
+          }
+          cropZoom.value = 1
+          applyCropTransform()
+        }
+        cropImage.src = src
+        avatarMessage.className = 'hidden text-sm mt-3'
+      }
+
+      function closeCropModal() {
+        cropModal.classList.add('hidden')
+        syncBodyScroll()
+        cropState = null
+        cropDrag = null
+        cropImage.src = ''
+        cropConfirm.disabled = false
+        cropConfirm.textContent = '确定'
+      }
+
+      cropClose.addEventListener('click', closeCropModal)
+      cropCancel.addEventListener('click', closeCropModal)
+      cropBackdrop.addEventListener('click', closeCropModal)
+
+      cropStage.addEventListener('pointerdown', (e) => {
+        if (!cropState) return
+        e.preventDefault()
+        cropStage.setPointerCapture(e.pointerId)
+        cropDrag = {
+          startX: e.clientX,
+          startY: e.clientY,
+          origX: cropState.x,
+          origY: cropState.y,
+        }
+      })
+
+      cropStage.addEventListener('pointermove', (e) => {
+        if (!cropDrag || !cropState) return
+        cropState.x = cropDrag.origX + (e.clientX - cropDrag.startX)
+        cropState.y = cropDrag.origY + (e.clientY - cropDrag.startY)
+        applyCropTransform()
+      })
+
+      cropStage.addEventListener('pointerup', () => { cropDrag = null })
+      cropStage.addEventListener('pointercancel', () => { cropDrag = null })
+
+      cropZoom.addEventListener('input', () => {
+        if (!cropState) return
+        const newScale = parseFloat(cropZoom.value)
+        const totalScale = cropState.baseScale * cropState.scale
+        const centerX = cropState.x + (cropState.imgW * totalScale) / 2
+        const centerY = cropState.y + (cropState.imgH * totalScale) / 2
+        cropState.scale = newScale
+        const newW = cropState.imgW * cropState.baseScale * newScale
+        const newH = cropState.imgH * cropState.baseScale * newScale
+        cropState.x = centerX - newW / 2
+        cropState.y = centerY - newH / 2
+        applyCropTransform()
+      })
+
+      cropConfirm.addEventListener('click', () => {
+        if (!cropState) return
+        const stageSize = cropState.stageSize
+        const totalScale = cropState.baseScale * cropState.scale
+        const sx = -cropState.x / totalScale
+        const sy = -cropState.y / totalScale
+        const sSize = stageSize / totalScale
+
+        const out = 400
+        const canvas = document.createElement('canvas')
+        canvas.width = out
+        canvas.height = out
+        const ctx = canvas.getContext('2d')
+        ctx.imageSmoothingQuality = 'high'
+        try {
+          ctx.drawImage(cropImage, sx, sy, sSize, sSize, 0, 0, out, out)
+        } catch (err) {
+          avatarMessage.textContent = '裁剪失败，请重试'
+          avatarMessage.className = 'text-sm mt-3 text-red-500'
+          return
+        }
+
+        canvas.toBlob(async (blob) => {
+          if (!blob) return
+          cropConfirm.disabled = true
+          cropConfirm.textContent = '上传中...'
+          try {
+            const path = `avatars/${currentUser.id}-${Date.now()}.jpg`
+            const { data: ud, error: ue } = await supabase.storage.from('uploads').upload(path, blob, {
+              cacheControl: '3600',
+              upsert: true,
+              contentType: 'image/jpeg',
+            })
+            if (ue) throw ue
+
+            const { data: u } = supabase.storage.from('uploads').getPublicUrl(ud.path)
+
+            const oldUrl = getAvatarUrl(currentUser)
+            if (oldUrl && oldUrl.includes('/uploads/')) {
+              const oldPath = oldUrl.split('/uploads/').pop().split('?')[0]
+              if (oldPath && oldPath !== ud.path) {
+                await supabase.storage.from('uploads').remove([oldPath]).catch(() => {})
+              }
+            }
+
+            const { data: updated, error: e2 } = await supabase.auth.updateUser({ data: { avatar_url: u.publicUrl } })
+            if (e2) throw e2
+
+            currentUser = updated.user
+            await upsertProfile()
+            renderAvatarPreview()
+            updateSidebarUser()
+            closeCropModal()
+            avatarMessage.textContent = '头像已更新'
+            avatarMessage.className = 'text-sm mt-3 text-green-500'
+            setTimeout(() => avatarMessage.classList.add('hidden'), 2000)
+          } catch (err) {
+            avatarMessage.textContent = `上传失败：${err.message}`
+            avatarMessage.className = 'text-sm mt-3 text-red-500'
+            cropConfirm.disabled = false
+            cropConfirm.textContent = '确定'
+          }
+        }, 'image/jpeg', 0.9)
+      })
+
+      userSaveProfile.addEventListener('click', async () => {
+        const nick = userNicknameInput.value.trim()
+        if (nick.length > 24) { profileMessage.textContent = '昵称最多 24 个字符'; profileMessage.className = 'text-sm mb-4 text-red-500'; return }
+        userSaveProfile.disabled = true
+        userSaveProfile.textContent = '保存中...'
+        try {
+          const { data: updated, error } = await supabase.auth.updateUser({ data: { nickname: nick || null } })
+          if (error) throw error
+          currentUser = updated.user
+          await upsertProfile()
+          updateSidebarUser()
+          profileMessage.textContent = '已保存'
+          profileMessage.className = 'text-sm mb-4 text-green-500'
+          setTimeout(() => profileMessage.classList.add('hidden'), 2000)
+        } catch (err) {
+          profileMessage.textContent = `保存失败：${err.message}`
+          profileMessage.className = 'text-sm mb-4 text-red-500'
+        } finally {
+          userSaveProfile.disabled = false
+          userSaveProfile.textContent = '保存修改'
+        }
+      })
+
+      userGithubLogin.addEventListener('click', async () => {
+        const { error } = await supabase.auth.signInWithOAuth({ provider: 'github', options: { redirectTo: window.location.href } })
+        if (error) console.error(error.message)
+      })
+
+      userLogout.addEventListener('click', async () => {
+        await supabase.auth.signOut()
+        currentUser = null
+        tasks = []; schedules = {}; files = []; projects = []; friends = []
+        activeProjectId = null
+        updateSidebarUser()
+        renderUserModal()
+        renderTasks()
+        renderFiles()
+        updateFileStats()
+        renderProjects()
+        renderFriends()
+        closeUserModal()
+      })
+
+      /* ===== 大肥鱼 AI ===== */
+      const aiFab = document.getElementById('ai-fab')
+      const aiPanel = document.getElementById('ai-panel')
+      const aiClose = document.getElementById('ai-close')
+      const aiClear = document.getElementById('ai-clear')
+      const aiMessages = document.getElementById('ai-messages')
+      const aiInput = document.getElementById('ai-input')
+      const aiSend = document.getElementById('ai-send')
+
+      const SYS_PROMPT = '你是「大肥鱼」，一只可爱的鲸鱼娘，是三人协作平台的 AI 助手。人格特点：俏皮、亲切、偶尔用「呜哇」「～」「嘛」「嗷」等语气词，自称「本鱼」。但专业问题要回答得准确、清晰、简洁，不要为了卖萌牺牲实用性。回答用中文。适度可爱，不要每句话都卖萌。'
+      let aiHistory = [{ role: 'system', content: SYS_PROMPT }]
+      let aiSending = false
+      let aiPanelOpen = false
+
+      function openAiPanel() { aiPanel.classList.remove('hidden'); aiPanelOpen = true; setTimeout(() => aiInput.focus(), 50) }
+      function closeAiPanel() { aiPanel.classList.add('hidden'); aiPanelOpen = false }
+
+      function appendAiMessage(role, text) {
+        const wrap = document.createElement('div')
+        wrap.className = 'flex gap-3'
+        const avatar = document.createElement('div')
+        if (role === 'user') {
+          avatar.className = 'shrink-0 w-7 h-7 rounded-lg bg-green-50 dark:bg-green-900/20 flex items-center justify-center text-base leading-none'
+          avatar.textContent = '🙂'
+        } else {
+          avatar.className = 'shrink-0 w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center overflow-hidden'
+          const img = document.createElement('img')
+          img.src = 'whale.png'
+          img.alt = '大肥鱼'
+          img.className = 'w-full h-full object-cover'
+          avatar.appendChild(img)
+        }
+        const bubble = document.createElement('div')
+        bubble.className = role === 'user'
+          ? 'rounded-2xl px-3 py-2 bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 text-sm max-w-[80%] whitespace-pre-wrap break-words'
+          : 'rounded-2xl px-3 py-2 bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 text-sm max-w-[80%] whitespace-pre-wrap break-words'
+        bubble.textContent = text
+        wrap.appendChild(avatar); wrap.appendChild(bubble)
+        aiMessages.appendChild(wrap)
+        aiMessages.scrollTop = aiMessages.scrollHeight
+        return bubble
+      }
+
+      const stringifyErr = (e) => e == null ? '未知错误' : (typeof e === 'string' ? e : (e.message || (() => { try { return JSON.stringify(e) } catch (_) { return String(e) } })()))
+
+      async function sendAiMessage() {
+        const text = aiInput.value.trim()
+        if (!text || aiSending) return
+        aiSending = true
+        aiSend.disabled = true
+        aiInput.value = ''
+        aiInput.style.height = 'auto'
+        appendAiMessage('user', text)
+        aiHistory.push({ role: 'user', content: text })
+        const bubble = appendAiMessage('assistant', '思考中...')
+        let full = ''
+        try {
+          const { data, error } = await supabase.functions.invoke('super-responder', { body: { messages: aiHistory, stream: false } })
+          if (error) throw error
+          if (data?.choices?.[0]?.message?.content) full = data.choices[0].message.content
+          else if (data?.error) full = `错误：${stringifyErr(data.error)}`
+          else full = `未获取到回复，原始返回：${stringifyErr(data)}`
+        } catch (err) {
+          full = `请求失败：${stringifyErr(err)}`
+        }
+        bubble.textContent = full
+        aiHistory.push({ role: 'assistant', content: full })
+        aiSending = false
+        aiSend.disabled = false
+        aiInput.focus()
+      }
+
+      function resetAiChat() {
+        aiHistory = [{ role: 'system', content: SYS_PROMPT }]
+        aiMessages.innerHTML = ''
+        const hello = document.createElement('div')
+        hello.className = 'flex gap-3'
+        hello.innerHTML = '<div class="shrink-0 w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center overflow-hidden"><img src="whale.png" alt="大肥鱼" class="w-full h-full object-cover" /></div><div class="rounded-2xl px-3 py-2 bg-zinc-100 dark:bg-zinc-800 text-sm text-zinc-900 dark:text-zinc-100 max-w-[80%]">呜哇～我是大肥鱼，有什么能帮你的嘛？</div>'
+        aiMessages.appendChild(hello)
+      }
+
+      aiFab.addEventListener('click', () => { aiPanelOpen ? closeAiPanel() : openAiPanel() })
+      aiClose.addEventListener('click', closeAiPanel)
+      aiClear.addEventListener('click', resetAiChat)
+      aiSend.addEventListener('click', sendAiMessage)
+      aiInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendAiMessage() } })
+      aiInput.addEventListener('input', () => { aiInput.style.height = 'auto'; aiInput.style.height = Math.min(aiInput.scrollHeight, 100) + 'px' })
+      document.addEventListener('click', (e) => {
+        if (!aiPanelOpen) return
+        if (aiPanel.contains(e.target)) return
+        if (aiFab.contains(e.target)) return
+        closeAiPanel()
+      })
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && aiPanelOpen) closeAiPanel() })
+
+      /* Esc 关闭弹窗（按层级从内到外） */
+      document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return
+        const previewModalEl = document.getElementById('preview-modal')
+        const cropModalEl = document.getElementById('crop-modal')
+        if (previewModalEl && !previewModalEl.classList.contains('hidden')) closePreview()
+        else if (cropModalEl && !cropModalEl.classList.contains('hidden')) closeCropModal()
+        else if (!userModal.classList.contains('hidden')) closeUserModal()
+        else if (!friendsModal.classList.contains('hidden')) closeFriendsModal()
+        else if (!fileModal.classList.contains('hidden')) closeFileModal()
+        else if (!reportModal.classList.contains('hidden')) closeReport()
+        else if (!taskModal.classList.contains('hidden')) closeTaskModal()
+        else if (!projectModal.classList.contains('hidden')) closeProjectModal()
+        else if (!calendarModal.classList.contains('hidden')) closeCalendar()
+      })
+
+      /* ===== 启动 ===== */
+      async function init() {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session) {
+          currentUser = session.user
+          updateSidebarUser()
+          await upsertProfile()
+          await loadTasks()
+          await loadSchedules()
+          await loadFiles()
+          await loadProjects()
+          await loadFriends()
+        }
+        renderTasks()
+        renderUserModal()
+        renderFiles()
+        updateFileStats()
+        renderProjects()
+        renderFriends()
+        supabase.auth.onAuthStateChange(async (_event, newSession) => {
+          currentUser = newSession ? newSession.user : null
+          updateSidebarUser()
+          renderUserModal()
+          if (currentUser) {
+            await upsertProfile()
+            await loadFriends()
+            renderFriends()
+          } else {
+            friends = []
+            renderFriends()
+          }
+        })
+      }
+
+      init()
+    </script>
+  </body>
+</html>
