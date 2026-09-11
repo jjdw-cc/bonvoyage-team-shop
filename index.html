@@ -26,12 +26,23 @@
       }
     </style>
   </head>
-  <body class="bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 antialiased">
+  <body class="bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 antialiased overflow-x-hidden">
+
+    <!-- 移动端菜单按钮（仅手机端显示） -->
+    <button id="mobile-menu-btn" type="button" aria-label="打开菜单" class="md:hidden fixed top-3 left-3 z-30 p-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm text-zinc-700 dark:text-zinc-300 active:scale-95 transition-all duration-200">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path d="M4 6h16M4 12h16M4 18h16" />
+      </svg>
+    </button>
+
+    <!-- 移动端侧边栏遮罩 -->
+    <div id="sidebar-overlay" class="hidden fixed inset-0 z-30 bg-black/40 backdrop-blur-sm md:hidden"></div>
+
     <div class="flex min-h-screen">
 
       <!-- 侧边栏 -->
-      <aside id="sidebar" data-collapsed="false" class="group w-52 data-[collapsed=true]:w-14 shrink-0 bg-white dark:bg-zinc-900 border-r border-zinc-100 dark:border-zinc-800 transition-all duration-300 ease-out flex flex-col">
-        <div class="flex items-center gap-2 h-16 px-4 md:px-5 group-data-[collapsed=true]:h-auto group-data-[collapsed=true]:py-3 group-data-[collapsed=true]:px-0 group-data-[collapsed=true]:flex-col group-data-[collapsed=true]:justify-center group-data-[collapsed=true]:gap-3 border-b border-zinc-100 dark:border-zinc-800">
+      <aside id="sidebar" data-collapsed="false" data-mobile-open="false" class="group fixed md:relative inset-y-0 left-0 z-40 md:z-auto w-52 data-[collapsed=true]:w-14 shrink-0 bg-white dark:bg-zinc-900 border-r border-zinc-100 dark:border-zinc-800 transition-all duration-300 ease-out flex flex-col -translate-x-full md:translate-x-0 data-[mobile-open=true]:translate-x-0">
+        <div class="flex items-center gap-2 h-16 px-4 md:px-5 group-data-[collapsed=true]:h-auto group-data-[collapsed=true]:py-3 group-data-[collapsed=true]:px-0 group-data-[collapsed=true]:flex-col group-data-[collapsed=true]:justify-center group-data-[collapsed=true]:gap-3 border-b border-zinc-100 dark:border-zinc-800 shrink-0">
           <button id="calendar-open" type="button" aria-label="打开日历" class="p-2 rounded-xl text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100 active:scale-95 transition-all duration-200">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
               <rect x="3" y="4" width="18" height="18" rx="2" />
@@ -46,14 +57,14 @@
               <path d="M16 3.13a4 4 0 010 7.75" />
             </svg>
           </button>
-          <button id="sidebar-toggle" type="button" aria-label="折叠侧边栏" class="p-2 rounded-xl text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100 active:scale-95 transition-all duration-200 ml-auto group-data-[collapsed=true]:ml-0">
+          <button id="sidebar-toggle" type="button" aria-label="折叠侧边栏" class="hidden md:block p-2 rounded-xl text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100 active:scale-95 transition-all duration-200 ml-auto group-data-[collapsed=true]:ml-0">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
               <path d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
         </div>
 
-        <nav class="flex-1 p-3 md:p-4 group-data-[collapsed=true]:p-2 flex flex-col gap-4 md:gap-6 group-data-[collapsed=true]:gap-4">
+        <nav class="flex-1 overflow-y-auto p-3 md:p-4 group-data-[collapsed=true]:p-2 flex flex-col gap-4 md:gap-6 group-data-[collapsed=true]:gap-4">
           <a href="#" data-page="dashboard" data-active="true" class="group/item flex items-center gap-4 rounded-xl px-3 py-2 group-data-[collapsed=true]:justify-center group-data-[collapsed=true]:px-0 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100 active:scale-95 transition-all duration-200 data-[active=true]:bg-zinc-100 dark:data-[active=true]:bg-zinc-800 data-[active=true]:text-zinc-900 dark:data-[active=true]:text-zinc-100">
             <svg class="w-6 h-6 shrink-0 group-hover/item:scale-110 transition-all duration-200" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
               <path d="M3 12l9-9 9 9" />
@@ -97,7 +108,7 @@
           </a>
         </nav>
 
-        <div class="p-3 md:p-4 group-data-[collapsed=true]:p-2 border-t border-zinc-100 dark:border-zinc-800">
+        <div class="p-3 md:p-4 group-data-[collapsed=true]:p-2 border-t border-zinc-100 dark:border-zinc-800 shrink-0">
           <div class="flex items-center justify-between gap-4 group-data-[collapsed=true]:flex-col group-data-[collapsed=true]:gap-4">
             <div id="user-open" role="button" tabindex="0" class="group/item flex items-center gap-4 rounded-xl px-3 py-2 group-data-[collapsed=true]:justify-center group-data-[collapsed=true]:px-0 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all duration-200 cursor-pointer min-w-0">
               <svg class="w-8 h-8 shrink-0 rounded-full group-hover/item:scale-110 transition-all duration-200" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -117,7 +128,7 @@
       </aside>
 
       <!-- 主内容区 -->
-      <main class="flex-1 p-4 md:p-6 lg:p-8 overflow-y-auto">
+      <main class="flex-1 px-4 pb-4 pt-16 md:p-6 lg:p-8 overflow-y-auto">
 
         <!-- 工作台 -->
         <section data-view="dashboard">
@@ -959,6 +970,8 @@
 
       const sidebar = document.getElementById('sidebar')
       const toggle = document.getElementById('sidebar-toggle')
+      const mobileMenuBtn = document.getElementById('mobile-menu-btn')
+      const sidebarOverlay = document.getElementById('sidebar-overlay')
       const navItems = document.querySelectorAll('[data-page]')
       const views = document.querySelectorAll('[data-view]')
       const calendarModal = document.getElementById('calendar-modal')
@@ -972,7 +985,7 @@
       function syncBodyScroll() {
         const cropModalEl = document.getElementById('crop-modal')
         const previewModalEl = document.getElementById('preview-modal')
-        const anyOpen =
+        const anyModalOpen =
           !calendarModal.classList.contains('hidden') ||
           !taskModal.classList.contains('hidden') ||
           !reportModal.classList.contains('hidden') ||
@@ -982,8 +995,28 @@
           !friendsModal.classList.contains('hidden') ||
           (cropModalEl && !cropModalEl.classList.contains('hidden')) ||
           (previewModalEl && !previewModalEl.classList.contains('hidden'))
-        document.body.style.overflow = anyOpen ? 'hidden' : ''
+        const mobileSidebarOpen = sidebar.getAttribute('data-mobile-open') === 'true'
+        document.body.style.overflow = (anyModalOpen || mobileSidebarOpen) ? 'hidden' : ''
       }
+
+      /* ===== 移动端侧边栏 ===== */
+      function openMobileSidebar() {
+        sidebar.setAttribute('data-mobile-open', 'true')
+        sidebarOverlay.classList.remove('hidden')
+        syncBodyScroll()
+      }
+      function closeMobileSidebar() {
+        sidebar.setAttribute('data-mobile-open', 'false')
+        sidebarOverlay.classList.add('hidden')
+        syncBodyScroll()
+      }
+      mobileMenuBtn.addEventListener('click', openMobileSidebar)
+      sidebarOverlay.addEventListener('click', closeMobileSidebar)
+      window.addEventListener('resize', () => {
+        if (window.innerWidth >= 768 && sidebar.getAttribute('data-mobile-open') === 'true') {
+          closeMobileSidebar()
+        }
+      })
 
       toggle.addEventListener('click', () => {
         const collapsed = sidebar.getAttribute('data-collapsed') === 'true'
@@ -998,6 +1031,7 @@
           views.forEach((v) => v.classList.toggle('hidden', v.dataset.view !== page))
           if (page === 'files') { await loadFiles(); await loadStorageUsage() }
           if (page === 'projects') { await loadProjects() }
+          if (sidebar.getAttribute('data-mobile-open') === 'true') closeMobileSidebar()
         })
       })
 
@@ -1334,7 +1368,6 @@
           friendsList.appendChild(li)
           return
         }
-        // 待处理（对方发来的）优先显示
         const sorted = friends.slice().sort((a, b) => {
           const w = (x) => (x.status === 'pending' && x.direction === 'in' ? 0 : 1)
           return w(a) - w(b)
@@ -2267,7 +2300,7 @@
             actions.className = 'flex items-center gap-2 shrink-0'
 
             const size = document.createElement('span')
-            size.className = 'text-xs text-zinc-400 dark:text-zinc-500 whitespace-nowrap mr-1'
+            size.className = 'text-xs text-zinc-400 dark:text-zinc-500 whitespace-nowrap mr-1 hidden sm:inline'
             size.textContent = fmtBytes(file.size || 0)
 
             const previewBtn = document.createElement('button')
@@ -2822,6 +2855,7 @@
         else if (!taskModal.classList.contains('hidden')) closeTaskModal()
         else if (!projectModal.classList.contains('hidden')) closeProjectModal()
         else if (!calendarModal.classList.contains('hidden')) closeCalendar()
+        else if (sidebar.getAttribute('data-mobile-open') === 'true') closeMobileSidebar()
       })
 
       /* ===== 启动 ===== */
