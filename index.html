@@ -28,19 +28,15 @@
   </head>
   <body class="bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 antialiased overflow-x-hidden">
 
-    <!-- 移动端菜单按钮（仅手机端显示） -->
     <button id="mobile-menu-btn" type="button" aria-label="打开菜单" class="md:hidden fixed top-3 left-3 z-30 p-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm text-zinc-700 dark:text-zinc-300 active:scale-95 transition-all duration-200">
       <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
         <path d="M4 6h16M4 12h16M4 18h16" />
       </svg>
     </button>
 
-    <!-- 移动端侧边栏遮罩 -->
     <div id="sidebar-overlay" class="hidden fixed inset-0 z-30 bg-black/40 backdrop-blur-sm md:hidden"></div>
 
     <div class="flex min-h-screen">
-
-      <!-- 侧边栏 -->
       <aside id="sidebar" data-collapsed="false" data-mobile-open="false" class="group fixed md:relative inset-y-0 left-0 z-40 md:z-auto w-52 data-[collapsed=true]:w-14 shrink-0 bg-white dark:bg-zinc-900 border-r border-zinc-100 dark:border-zinc-800 transition-all duration-300 ease-out flex flex-col -translate-x-full md:translate-x-0 data-[mobile-open=true]:translate-x-0">
         <div class="flex items-center gap-2 h-16 px-4 md:px-5 group-data-[collapsed=true]:h-auto group-data-[collapsed=true]:py-3 group-data-[collapsed=true]:px-0 group-data-[collapsed=true]:flex-col group-data-[collapsed=true]:justify-center group-data-[collapsed=true]:gap-3 border-b border-zinc-100 dark:border-zinc-800 shrink-0">
           <button id="calendar-open" type="button" aria-label="打开日历" class="p-2 rounded-xl text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100 active:scale-95 transition-all duration-200">
@@ -127,10 +123,8 @@
         </div>
       </aside>
 
-      <!-- 主内容区 -->
       <main class="flex-1 px-4 pb-4 pt-16 md:p-6 lg:p-8 overflow-y-auto">
 
-        <!-- 工作台 -->
         <section data-view="dashboard">
           <div class="mb-6 md:mb-8">
             <h1 id="dash-greeting" class="font-semibold text-zinc-900 dark:text-zinc-100 text-3xl md:text-4xl mb-2">下午好</h1>
@@ -217,7 +211,6 @@
           </div>
         </section>
 
-        <!-- 项目 -->
         <section data-view="projects" class="hidden">
           <div class="flex items-start justify-between gap-4 mb-4 md:mb-6">
             <div>
@@ -241,7 +234,6 @@
           </div>
         </section>
 
-        <!-- 任务 -->
         <section data-view="tasks" class="hidden">
           <div class="mb-6 md:mb-8">
             <h1 class="font-semibold text-zinc-900 dark:text-zinc-100 text-3xl md:text-4xl mb-2">任务</h1>
@@ -317,7 +309,6 @@
           </div>
         </section>
 
-        <!-- 文件 -->
         <section data-view="files" class="hidden">
           <div class="flex items-start justify-between gap-4 mb-4 md:mb-6">
             <div>
@@ -379,7 +370,6 @@
           <div id="file-groups" class="flex flex-col gap-3 md:gap-4"></div>
         </section>
 
-        <!-- 线上操作 -->
         <section data-view="online" class="hidden">
           <div class="mb-6 md:mb-8">
             <h1 class="font-semibold text-zinc-900 dark:text-zinc-100 text-3xl md:text-4xl mb-2">线上操作</h1>
@@ -693,7 +683,9 @@
       <div id="user-backdrop" class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
       <div class="relative w-full max-w-3xl h-[600px] rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-lg overflow-hidden flex">
 
-        <aside class="w-48 shrink-0 bg-zinc-50 dark:bg-zinc-800/50 border-r border-zinc-100 dark:border-zinc-800 flex flex-col">
+        <div id="user-nav-overlay" class="hidden md:hidden absolute inset-0 z-10 bg-black/40 backdrop-blur-sm"></div>
+
+        <aside id="user-nav" data-mobile-open="false" class="absolute md:relative inset-y-0 left-0 z-20 md:z-auto w-56 md:w-48 shrink-0 bg-zinc-50 dark:bg-zinc-800/50 border-r border-zinc-100 dark:border-zinc-800 flex flex-col -translate-x-full md:translate-x-0 data-[mobile-open=true]:translate-x-0 transition-transform duration-300 ease-out">
           <div class="h-16 flex items-center px-4 border-b border-zinc-100 dark:border-zinc-800">
             <h2 class="font-semibold text-zinc-900 dark:text-zinc-100 text-base">用户中心</h2>
           </div>
@@ -722,28 +714,60 @@
         </aside>
 
         <div class="flex-1 min-w-0 flex flex-col">
-          <div class="h-16 flex items-center justify-end px-4 border-b border-zinc-100 dark:border-zinc-800 shrink-0">
-            <button id="user-close" type="button" class="p-2 rounded-xl text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100 active:scale-95 transition-all duration-200">
+          <div class="h-16 flex items-center justify-between gap-3 px-4 border-b border-zinc-100 dark:border-zinc-800 shrink-0">
+            <button id="user-nav-toggle" type="button" aria-label="打开用户导航" class="md:hidden p-2 rounded-xl text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100 active:scale-95 transition-all duration-200">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+            <span class="md:hidden font-semibold text-zinc-900 dark:text-zinc-100 text-base">用户中心</span>
+            <button id="user-close" type="button" class="ml-auto p-2 rounded-xl text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100 active:scale-95 transition-all duration-200">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" /></svg>
             </button>
           </div>
 
           <div class="flex-1 overflow-y-auto p-6">
             <div id="user-page-login">
-              <div class="flex flex-col items-center justify-center py-12 text-center">
+              <div class="flex flex-col items-center justify-center py-8 text-center">
                 <div class="p-4 rounded-2xl bg-blue-50 dark:bg-blue-900/20 mb-6">
                   <svg class="w-10 h-10 text-blue-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                     <circle cx="12" cy="8" r="4" /><path d="M4 21v-1a6 6 0 016-6h4a6 6 0 016 6v1" />
                   </svg>
                 </div>
                 <h3 class="font-semibold text-zinc-900 dark:text-zinc-100 text-lg mb-2">登录以使用完整功能</h3>
-                <p class="text-zinc-600 dark:text-zinc-400 text-sm mb-6 max-w-sm">登录后可以管理个人资料、上传头像、更改昵称</p>
-                <button id="user-github-login" type="button" class="inline-flex items-center justify-center gap-3 px-6 py-3 rounded-xl font-medium bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 active:scale-95 transition-all duration-200">
+                <p class="text-zinc-600 dark:text-zinc-400 text-sm mb-6 max-w-sm">使用管理员分配的用户名和密码登录</p>
+              </div>
+
+              <div class="max-w-sm mx-auto space-y-3">
+                <div>
+                  <label class="block text-xs text-zinc-600 dark:text-zinc-400 mb-1">用户名</label>
+                  <input id="login-username" type="text" autocomplete="username" placeholder="输入用户名" class="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl px-4 py-2 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" />
+                </div>
+                <div>
+                  <label class="block text-xs text-zinc-600 dark:text-zinc-400 mb-1">密码</label>
+                  <input id="login-password" type="password" autocomplete="current-password" placeholder="输入密码" class="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl px-4 py-2 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" />
+                </div>
+                <p id="login-message" class="hidden text-sm"></p>
+                <button id="login-submit" type="button" class="w-full px-5 py-2.5 rounded-xl font-medium bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 active:scale-95 transition-all duration-200">
+                  登录
+                </button>
+
+                <div class="flex items-center gap-3 my-3">
+                  <span class="flex-1 h-px bg-zinc-200 dark:bg-zinc-700"></span>
+                  <span class="text-xs text-zinc-400 dark:text-zinc-500">或</span>
+                  <span class="flex-1 h-px bg-zinc-200 dark:bg-zinc-700"></span>
+                </div>
+
+                <button id="user-github-login" type="button" class="w-full inline-flex items-center justify-center gap-3 px-5 py-2.5 rounded-xl font-medium text-sm bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 hover:bg-zinc-200 dark:hover:bg-zinc-700 active:scale-95 transition-all duration-200">
                   <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M12 .5C5.37.5 0 5.87 0 12.5c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58v-2.03c-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.75.08-.73.08-.73 1.21.08 1.84 1.24 1.84 1.24 1.07 1.83 2.81 1.3 3.5 1 .11-.78.42-1.3.76-1.6-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.12-.3-.54-1.52.12-3.17 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 013-.4c1.02 0 2.05.14 3 .4 2.28-1.55 3.29-1.23 3.29-1.23.66 1.65.24 2.87.12 3.17.77.84 1.24 1.91 1.24 3.22 0 4.61-2.8 5.63-5.48 5.92.43.37.81 1.1.81 2.22v3.29c0 .32.22.7.83.58A12 12 0 0024 12.5C24 5.87 18.63.5 12 .5z" />
                   </svg>
                   使用 GitHub 登录
                 </button>
+
+                <p class="text-xs text-zinc-500 dark:text-zinc-400 text-center pt-2">
+                  账号由管理员统一开通，如需新账号请联系管理员
+                </p>
               </div>
             </div>
 
@@ -785,7 +809,7 @@
               <h3 class="font-semibold text-zinc-900 dark:text-zinc-100 text-xl mb-6">账号</h3>
               <div class="space-y-4">
                 <div>
-                  <p class="text-sm text-zinc-600 dark:text-zinc-400 mb-1">邮箱</p>
+                  <p class="text-sm text-zinc-600 dark:text-zinc-400 mb-1">用户名</p>
                   <p id="user-account-email" class="text-sm text-zinc-900 dark:text-zinc-100 break-all"></p>
                 </div>
                 <div>
@@ -811,7 +835,6 @@
     <div id="crop-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="裁剪头像">
       <div id="crop-backdrop" class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
       <div class="relative w-full max-w-md rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-2xl p-6">
-
         <div class="flex items-center justify-between mb-4">
           <h3 class="font-semibold text-lg text-zinc-900 dark:text-zinc-100">调整头像</h3>
           <button id="crop-close" type="button" aria-label="关闭" class="p-2 rounded-xl text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-95 transition-all duration-200">
@@ -820,38 +843,21 @@
             </svg>
           </button>
         </div>
-
         <p class="text-xs text-zinc-500 dark:text-zinc-400 mb-3">拖动图片调整位置，用滑块缩放</p>
-
         <div id="crop-stage" class="relative w-full aspect-square rounded-2xl overflow-hidden bg-black cursor-grab active:cursor-grabbing select-none touch-none">
           <img id="crop-image" class="absolute top-0 left-0 pointer-events-none select-none origin-top-left" draggable="false" alt="待裁剪图片" />
           <div class="absolute inset-0 rounded-full border-2 border-white/60 pointer-events-none" style="box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.55);"></div>
         </div>
-
         <div class="mt-4">
           <div class="flex items-center justify-between mb-2">
             <label class="text-sm text-zinc-600 dark:text-zinc-400">缩放</label>
           </div>
-          <input
-            id="crop-zoom"
-            type="range"
-            min="1"
-            max="3"
-            step="0.01"
-            value="1"
-            class="w-full accent-zinc-900 dark:accent-white"
-          />
+          <input id="crop-zoom" type="range" min="1" max="3" step="0.01" value="1" class="w-full accent-zinc-900 dark:accent-white" />
         </div>
-
         <div class="flex gap-3 mt-6">
-          <button id="crop-cancel" type="button" class="flex-1 px-4 py-2 rounded-xl font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 hover:bg-zinc-200 dark:hover:bg-zinc-700 active:scale-95 transition-all duration-200">
-            取消
-          </button>
-          <button id="crop-confirm" type="button" class="flex-1 px-4 py-2 rounded-xl font-medium bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 active:scale-95 transition-all duration-200 disabled:opacity-50">
-            确定
-          </button>
+          <button id="crop-cancel" type="button" class="flex-1 px-4 py-2 rounded-xl font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 hover:bg-zinc-200 dark:hover:bg-zinc-700 active:scale-95 transition-all duration-200">取消</button>
+          <button id="crop-confirm" type="button" class="flex-1 px-4 py-2 rounded-xl font-medium bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 active:scale-95 transition-all duration-200 disabled:opacity-50">确定</button>
         </div>
-
       </div>
     </div>
 
@@ -859,53 +865,33 @@
     <div id="preview-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="文件预览">
       <div id="preview-backdrop" class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
       <div class="relative w-full max-w-4xl max-h-[90vh] rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-2xl flex flex-col overflow-hidden">
-
         <div class="flex items-center justify-between gap-4 px-5 py-3 border-b border-zinc-100 dark:border-zinc-800 shrink-0">
           <div class="min-w-0 flex-1">
             <h3 id="preview-name" class="font-semibold text-sm md:text-base text-zinc-900 dark:text-zinc-100 truncate"></h3>
             <p id="preview-meta" class="text-xs text-zinc-500 dark:text-zinc-400 truncate"></p>
           </div>
           <div class="flex items-center gap-2 shrink-0">
-            <a
-              id="preview-download"
-              class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm font-medium bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 active:scale-95 transition-all duration-200"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
+            <a id="preview-download" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm font-medium bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 active:scale-95 transition-all duration-200" target="_blank" rel="noopener noreferrer">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                 <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
                 <path d="M7 10l5 5 5-5M12 15V3" />
               </svg>
               下载
             </a>
-            <a
-              id="preview-open"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="新标签打开"
-              class="p-2 rounded-xl text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-95 transition-all duration-200"
-            >
+            <a id="preview-open" target="_blank" rel="noopener noreferrer" aria-label="新标签打开" class="p-2 rounded-xl text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-95 transition-all duration-200">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                 <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
                 <path d="M15 3h6v6M10 14L21 3" />
               </svg>
             </a>
-            <button
-              id="preview-close"
-              type="button"
-              aria-label="关闭"
-              class="p-2 rounded-xl text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-95 transition-all duration-200"
-            >
+            <button id="preview-close" type="button" aria-label="关闭" class="p-2 rounded-xl text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-95 transition-all duration-200">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                 <path d="M18 6L6 18M6 6l12 12" />
               </svg>
             </button>
           </div>
         </div>
-
-        <div id="preview-body" class="flex-1 overflow-auto bg-zinc-50 dark:bg-zinc-950 flex items-center justify-center p-4 min-h-[300px]">
-          <!-- 动态填充 -->
-        </div>
+        <div id="preview-body" class="flex-1 overflow-auto bg-zinc-50 dark:bg-zinc-950 flex items-center justify-center p-4 min-h-[300px]"></div>
       </div>
     </div>
 
@@ -968,6 +954,8 @@
         'sb_publishable_717gtd0jY6aoeEGx2sAi-Q_DD7tlM9n'
       )
 
+      const EMAIL_DOMAIN = 'bonvoyage.click'
+
       const sidebar = document.getElementById('sidebar')
       const toggle = document.getElementById('sidebar-toggle')
       const mobileMenuBtn = document.getElementById('mobile-menu-btn')
@@ -999,7 +987,6 @@
         document.body.style.overflow = (anyModalOpen || mobileSidebarOpen) ? 'hidden' : ''
       }
 
-      /* ===== 移动端侧边栏 ===== */
       function openMobileSidebar() {
         sidebar.setAttribute('data-mobile-open', 'true')
         sidebarOverlay.classList.remove('hidden')
@@ -1013,9 +1000,7 @@
       mobileMenuBtn.addEventListener('click', openMobileSidebar)
       sidebarOverlay.addEventListener('click', closeMobileSidebar)
       window.addEventListener('resize', () => {
-        if (window.innerWidth >= 768 && sidebar.getAttribute('data-mobile-open') === 'true') {
-          closeMobileSidebar()
-        }
+        if (window.innerWidth >= 768 && sidebar.getAttribute('data-mobile-open') === 'true') closeMobileSidebar()
       })
 
       toggle.addEventListener('click', () => {
@@ -1064,7 +1049,6 @@
       let keyword = ''
       let draftTags = []
 
-      /* ===== 文件分类 ===== */
       const FILE_CATEGORIES = ['文档', '图片', '表格', '代码', '音视频', '压缩包', '其他']
       const CATEGORY_STYLE = {
         '文档': { bg: 'bg-blue-50 dark:bg-blue-900/20', fg: 'text-blue-500' },
@@ -1086,7 +1070,6 @@
         return '其他'
       }
 
-      /* ===== 文件预览 ===== */
       const previewModal = document.getElementById('preview-modal')
       const previewBackdrop = document.getElementById('preview-backdrop')
       const previewClose = document.getElementById('preview-close')
@@ -1108,7 +1091,6 @@
         if ((file.type || '').startsWith('text/')) return true
         return /\.(txt|md|markdown|json|xml|yml|yaml|html|htm|css|scss|less|js|mjs|cjs|ts|tsx|jsx|py|java|c|cpp|h|hpp|go|rs|php|rb|sh|bash|log|csv|ini|conf|env|sql)$/i.test(file.name)
       }
-
       function resetPreviewBody() {
         previewBody.classList.add('items-center', 'justify-center')
         previewBody.innerHTML = ''
@@ -1120,7 +1102,6 @@
         previewDownload.href = file.url
         previewDownload.setAttribute('download', file.name)
         previewOpen.href = file.url
-
         resetPreviewBody()
         previewModal.classList.remove('hidden')
         syncBodyScroll()
@@ -1133,7 +1114,6 @@
           previewBody.appendChild(img)
           return
         }
-
         if (isPdfFile(file)) {
           previewBody.classList.remove('items-center', 'justify-center')
           const iframe = document.createElement('iframe')
@@ -1143,7 +1123,6 @@
           previewBody.appendChild(iframe)
           return
         }
-
         if (isTextFile(file)) {
           previewBody.classList.remove('items-center', 'justify-center')
           const wrap = document.createElement('div')
@@ -1153,7 +1132,6 @@
           pre.textContent = '加载中...'
           wrap.appendChild(pre)
           previewBody.appendChild(wrap)
-
           try {
             const res = await fetch(file.url)
             if (!res.ok) throw new Error(`HTTP ${res.status}`)
@@ -1165,7 +1143,6 @@
           }
           return
         }
-
         const wrap = document.createElement('div')
         wrap.className = 'text-center max-w-sm'
         wrap.innerHTML =
@@ -1192,11 +1169,9 @@
         previewBody.classList.add('items-center', 'justify-center')
         syncBodyScroll()
       }
-
       previewClose.addEventListener('click', closePreview)
       previewBackdrop.addEventListener('click', closePreview)
 
-      /* ===== 日历 ===== */
       const calendarOpen = document.getElementById('calendar-open')
       const calendarClose = document.getElementById('calendar-close')
       const calendarBackdrop = document.getElementById('calendar-backdrop')
@@ -1305,7 +1280,6 @@
       calendarClose.addEventListener('click', closeCalendar)
       calendarBackdrop.addEventListener('click', closeCalendar)
 
-      /* ===== 好友 ===== */
       const friendsOpen = document.getElementById('friends-open')
       const friendsClose = document.getElementById('friends-close')
       const friendsBackdrop = document.getElementById('friends-backdrop')
@@ -1448,32 +1422,17 @@
         if (!currentUser) return
         const id = rawId.trim()
         if (!id) return
-        if (id === currentUser.id) {
-          showFriendsMessage('不能添加自己为好友', 'error')
-          return
-        }
-        if (!UUID_RE.test(id)) {
-          showFriendsMessage('用户 ID 格式不正确', 'error')
-          return
-        }
-        if (friends.some((f) => f.id === id)) {
-          showFriendsMessage('已存在好友关系或待确认请求', 'error')
-          return
-        }
+        if (id === currentUser.id) { showFriendsMessage('不能添加自己为好友', 'error'); return }
+        if (!UUID_RE.test(id)) { showFriendsMessage('用户 ID 格式不正确', 'error'); return }
+        if (friends.some((f) => f.id === id)) { showFriendsMessage('已存在好友关系或待确认请求', 'error'); return }
         const { data: prof } = await supabase.from('profiles').select('*').eq('id', id).maybeSingle()
-        if (!prof) {
-          showFriendsMessage('未找到该用户（对方需先登录一次）', 'error')
-          return
-        }
+        if (!prof) { showFriendsMessage('未找到该用户', 'error'); return }
         const { error } = await supabase.from('friends').insert({
           user_id: currentUser.id,
           friend_id: id,
           status: 'pending',
         })
-        if (error) {
-          showFriendsMessage(`添加失败：${error.message}`, 'error')
-          return
-        }
+        if (error) { showFriendsMessage(`添加失败：${error.message}`, 'error'); return }
         showFriendsMessage('已发送好友请求', 'success')
         friendsIdInput.value = ''
         await loadFriends()
@@ -1487,14 +1446,12 @@
         renderFriends()
         renderProjectFriendSelect()
       }
-
       async function rejectFriend(f) {
         await supabase.from('friends').delete().eq('id', f.recordId)
         await loadFriends()
         renderFriends()
         renderProjectFriendSelect()
       }
-
       async function removeFriend(f) {
         await supabase.from('friends').delete().eq('id', f.recordId)
         await loadFriends()
@@ -1524,7 +1481,6 @@
         if (e.key === 'Enter') { e.preventDefault(); addFriendById(friendsIdInput.value) }
       })
 
-      /* ===== 项目 ===== */
       const projectAddOpen = document.getElementById('project-add-open')
       const projectClose = document.getElementById('project-close')
       const projectBackdrop = document.getElementById('project-backdrop')
@@ -1595,7 +1551,6 @@
             projectList.appendChild(li)
           })
         }
-
         renderProjectDetail()
       }
 
@@ -1815,7 +1770,6 @@
       })
       projectNameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); projectSubmit.click() } })
 
-      /* ===== 任务 ===== */
       const taskSummary = document.getElementById('task-summary')
       const taskSearch = document.getElementById('task-search')
       const taskAddOpen = document.getElementById('task-add-open')
@@ -2038,7 +1992,6 @@
       })
       taskTitleInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); taskSubmit.click() } })
 
-      /* ===== 上报 ===== */
       const reportClose = document.getElementById('report-close')
       const reportBackdrop = document.getElementById('report-backdrop')
       const reportTaskTitle = document.getElementById('report-task-title')
@@ -2196,7 +2149,6 @@
         renderTasks(); closeReport()
       })
 
-      /* ===== 文件 ===== */
       const storageRing = document.getElementById('storage-ring')
       const storagePercent = document.getElementById('storage-percent')
       const storageUsed = document.getElementById('storage-used')
@@ -2401,7 +2353,6 @@
         dbSizeEl.textContent = fmtBytes(data)
       }
 
-      /* ===== 用户中心 ===== */
       const userOpen = document.getElementById('user-open')
       const userClose = document.getElementById('user-close')
       const userBackdrop = document.getElementById('user-backdrop')
@@ -2422,9 +2373,92 @@
       const userAccountId = document.getElementById('user-account-id')
       const userAccountProvider = document.getElementById('user-account-provider')
       const userAccountCreated = document.getElementById('user-account-created')
+      const loginUsername = document.getElementById('login-username')
+      const loginPassword = document.getElementById('login-password')
+      const loginSubmit = document.getElementById('login-submit')
+      const loginMessage = document.getElementById('login-message')
 
-      const getDisplayName = (u) => u ? (u.user_metadata?.nickname || u.user_metadata?.user_name || u.user_metadata?.name || u.email || '用户') : '未登录'
+      const userNav = document.getElementById('user-nav')
+      const userNavToggle = document.getElementById('user-nav-toggle')
+      const userNavOverlay = document.getElementById('user-nav-overlay')
+
+      function openUserNav() {
+        userNav.setAttribute('data-mobile-open', 'true')
+        userNavOverlay.classList.remove('hidden')
+      }
+      function closeUserNav() {
+        userNav.setAttribute('data-mobile-open', 'false')
+        userNavOverlay.classList.add('hidden')
+      }
+      userNavToggle.addEventListener('click', openUserNav)
+      userNavOverlay.addEventListener('click', closeUserNav)
+      window.addEventListener('resize', () => {
+        if (window.innerWidth >= 768) closeUserNav()
+      })
+
+      const getDisplayName = (u) => {
+        if (!u) return '未登录'
+        if (u.user_metadata?.nickname) return u.user_metadata.nickname
+        if (u.user_metadata?.user_name) return u.user_metadata.user_name
+        if (u.user_metadata?.name) return u.user_metadata.name
+        if (u.email) return u.email.split('@')[0]
+        return '用户'
+      }
       const getAvatarUrl = (u) => u?.user_metadata?.avatar_url || null
+
+      function showLoginMessage(text, type) {
+        loginMessage.textContent = text
+        loginMessage.className = type === 'success'
+          ? 'text-sm text-green-500'
+          : 'text-sm text-red-500'
+      }
+      function clearLoginMessage() {
+        loginMessage.textContent = ''
+        loginMessage.className = 'hidden text-sm'
+      }
+
+      async function handleUsernameLogin() {
+        const raw = loginUsername.value.trim()
+        const pwd = loginPassword.value
+        if (!raw) { showLoginMessage('请输入用户名', 'error'); loginUsername.focus(); return }
+        if (!pwd) { showLoginMessage('请输入密码', 'error'); loginPassword.focus(); return }
+        const username = raw.toLowerCase().replace(/[^a-z0-9._-]/g, '')
+        if (!username) { showLoginMessage('用户名只能包含字母、数字、下划线', 'error'); return }
+        const email = `${username}@${EMAIL_DOMAIN}`
+        loginSubmit.disabled = true
+        loginSubmit.textContent = '登录中...'
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password: pwd })
+        loginSubmit.disabled = false
+        loginSubmit.textContent = '登录'
+        if (error) {
+          showLoginMessage(`登录失败：${error.message}`, 'error')
+          return
+        }
+        currentUser = data.user
+        clearLoginMessage()
+        loginUsername.value = ''
+        loginPassword.value = ''
+        updateSidebarUser()
+        await upsertProfile()
+        await loadTasks()
+        await loadSchedules()
+        await loadFiles()
+        await loadProjects()
+        await loadFriends()
+        renderTasks()
+        renderFiles()
+        updateFileStats()
+        renderProjects()
+        renderFriends()
+        renderUserModal()
+      }
+      loginSubmit.addEventListener('click', handleUsernameLogin)
+      loginPassword.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); handleUsernameLogin() }
+      })
+      loginUsername.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); loginPassword.focus() }
+      })
 
       async function upsertProfile() {
         if (!currentUser) return
@@ -2483,7 +2517,7 @@
 
       function fillAccountView() {
         if (!currentUser) return
-        userAccountEmail.textContent = currentUser.email || '未设置'
+        userAccountEmail.textContent = currentUser.email ? currentUser.email.split('@')[0] : '未设置'
         userAccountId.textContent = currentUser.id || '-'
         userAccountProvider.textContent = currentUser.app_metadata?.provider || '未知'
         userAccountCreated.textContent = currentUser.created_at ? new Date(currentUser.created_at).toLocaleString('zh-CN') : '-'
@@ -2505,7 +2539,7 @@
       }
 
       function openUserModal() { renderUserModal(); userModal.classList.remove('hidden'); syncBodyScroll() }
-      function closeUserModal() { userModal.classList.add('hidden'); syncBodyScroll() }
+      function closeUserModal() { userModal.classList.add('hidden'); closeUserNav(); syncBodyScroll() }
 
       userOpen.addEventListener('click', openUserModal)
       userOpen.addEventListener('keydown', (e) => {
@@ -2513,9 +2547,11 @@
       })
       userClose.addEventListener('click', closeUserModal)
       userBackdrop.addEventListener('click', closeUserModal)
-      userNavItems.forEach((b) => b.addEventListener('click', () => setUserPage(b.dataset.userPage)))
+      userNavItems.forEach((b) => b.addEventListener('click', () => {
+        setUserPage(b.dataset.userPage)
+        if (window.innerWidth < 768) closeUserNav()
+      }))
 
-      /* ===== 头像裁剪 ===== */
       const cropModal = document.getElementById('crop-modal')
       const cropBackdrop = document.getElementById('crop-backdrop')
       const cropClose = document.getElementById('crop-close')
@@ -2529,9 +2565,7 @@
       let cropState = null
       let cropDrag = null
 
-      userAvatarChange.addEventListener('click', () => {
-        userAvatarInput.click()
-      })
+      userAvatarChange.addEventListener('click', () => { userAvatarInput.click() })
 
       userAvatarInput.addEventListener('change', () => {
         const file = userAvatarInput.files?.[0]
@@ -2746,7 +2780,6 @@
         closeUserModal()
       })
 
-      /* ===== 大肥鱼 AI ===== */
       const aiFab = document.getElementById('ai-fab')
       const aiPanel = document.getElementById('ai-panel')
       const aiClose = document.getElementById('ai-close')
@@ -2841,7 +2874,6 @@
       })
       document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && aiPanelOpen) closeAiPanel() })
 
-      /* Esc 关闭弹窗（按层级从内到外） */
       document.addEventListener('keydown', (e) => {
         if (e.key !== 'Escape') return
         const previewModalEl = document.getElementById('preview-modal')
@@ -2858,7 +2890,6 @@
         else if (sidebar.getAttribute('data-mobile-open') === 'true') closeMobileSidebar()
       })
 
-      /* ===== 启动 ===== */
       async function init() {
         const { data: { session } } = await supabase.auth.getSession()
         if (session) {
