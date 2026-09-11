@@ -8,6 +8,9 @@
     <script>
       tailwind.config = {
         darkMode: 'class',
+        future: {
+          hoverOnlyWhenSupported: true,
+        },
         theme: {
           extend: {
             fontFamily: {
@@ -24,6 +27,20 @@
           animation-duration: 0.01ms !important;
         }
       }
+      /* ===== 性能优化：减少 Edge 掉帧 ===== */
+      /* 1. Edge 对 backdrop-filter 支持性能较差，禁用全屏背景模糊 */
+      .backdrop-blur-sm,
+      .backdrop-blur {
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+      }
+      /* 2. 侧边栏与 AI 面板：隔离渲染范围，减少重排 */
+      #sidebar { contain: layout style; }
+      #ai-panel { contain: layout style paint; }
+      /* 3. 卡片 hover 位移只在支持 hover 的设备启用 */
+      @media (hover: none) {
+        .group:hover { transform: none !important; }
+      }
     </style>
   </head>
   <body class="bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 antialiased overflow-x-hidden">
@@ -34,7 +51,7 @@
       </svg>
     </button>
 
-    <div id="sidebar-overlay" class="hidden fixed inset-0 z-30 bg-black/40 backdrop-blur-sm md:hidden"></div>
+    <div id="sidebar-overlay" class="hidden fixed inset-0 z-30 bg-black/40 md:hidden"></div>
 
     <div class="flex min-h-screen">
       <aside id="sidebar" data-collapsed="false" data-mobile-open="false" class="group fixed md:relative inset-y-0 left-0 z-40 md:z-auto w-52 data-[collapsed=true]:w-14 shrink-0 bg-white dark:bg-zinc-900 border-r border-zinc-100 dark:border-zinc-800 transition-all duration-300 ease-out flex flex-col -translate-x-full md:translate-x-0 data-[mobile-open=true]:translate-x-0">
@@ -429,9 +446,8 @@
       </main>
     </div>
 
-    <!-- 日历弹窗 -->
     <div id="calendar-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog">
-      <div id="calendar-backdrop" class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
+      <div id="calendar-backdrop" class="absolute inset-0 bg-black/40"></div>
       <div class="relative w-full max-w-md rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-lg p-6 max-h-[90vh] overflow-y-auto">
         <div class="flex items-center justify-between gap-4 mb-6">
           <div class="flex items-center gap-3">
@@ -478,9 +494,8 @@
       </div>
     </div>
 
-    <!-- 好友弹窗 -->
     <div id="friends-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog">
-      <div id="friends-backdrop" class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
+      <div id="friends-backdrop" class="absolute inset-0 bg-black/40"></div>
       <div class="relative w-full max-w-lg rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-lg p-6 max-h-[90vh] overflow-y-auto">
         <div class="flex items-center justify-between gap-4 mb-6">
           <div class="flex items-center gap-4">
@@ -516,9 +531,8 @@
       </div>
     </div>
 
-    <!-- 新建项目弹窗 -->
     <div id="project-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog">
-      <div id="project-backdrop" class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
+      <div id="project-backdrop" class="absolute inset-0 bg-black/40"></div>
       <div class="relative w-full max-w-md rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-lg p-6 max-h-[90vh] overflow-y-auto">
         <div class="flex items-center justify-between gap-4 mb-6">
           <div class="flex items-center gap-4">
@@ -565,9 +579,8 @@
       </div>
     </div>
 
-    <!-- 添加任务弹窗 -->
     <div id="task-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog">
-      <div id="task-backdrop" class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
+      <div id="task-backdrop" class="absolute inset-0 bg-black/40"></div>
       <div class="relative w-full max-w-md rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-lg p-6 max-h-[90vh] overflow-y-auto">
         <div class="flex items-center justify-between gap-4 mb-6">
           <div class="flex items-center gap-4">
@@ -596,9 +609,8 @@
       </div>
     </div>
 
-    <!-- 上报弹窗 -->
     <div id="report-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog">
-      <div id="report-backdrop" class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
+      <div id="report-backdrop" class="absolute inset-0 bg-black/40"></div>
       <div class="relative w-full max-w-md rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-lg p-6 max-h-[90vh] overflow-y-auto">
         <div class="flex items-center justify-between gap-4 mb-6">
           <div class="flex items-center gap-4 min-w-0">
@@ -640,9 +652,8 @@
       </div>
     </div>
 
-    <!-- 文件上传弹窗 -->
     <div id="file-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog">
-      <div id="file-backdrop" class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
+      <div id="file-backdrop" class="absolute inset-0 bg-black/40"></div>
       <div class="relative w-full max-w-md rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-lg p-6 max-h-[90vh] overflow-y-auto">
         <div class="flex items-center justify-between gap-4 mb-6">
           <div class="flex items-center gap-4">
@@ -678,12 +689,11 @@
       </div>
     </div>
 
-    <!-- 用户中心弹窗 -->
     <div id="user-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog">
-      <div id="user-backdrop" class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
+      <div id="user-backdrop" class="absolute inset-0 bg-black/40"></div>
       <div class="relative w-full max-w-3xl h-[600px] rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-lg overflow-hidden flex">
 
-        <div id="user-nav-overlay" class="hidden md:hidden absolute inset-0 z-10 bg-black/40 backdrop-blur-sm"></div>
+        <div id="user-nav-overlay" class="hidden md:hidden absolute inset-0 z-10 bg-black/40"></div>
 
         <aside id="user-nav" data-mobile-open="false" class="absolute md:relative inset-y-0 left-0 z-20 md:z-auto w-56 md:w-48 shrink-0 bg-zinc-50 dark:bg-zinc-800/50 border-r border-zinc-100 dark:border-zinc-800 flex flex-col -translate-x-full md:translate-x-0 data-[mobile-open=true]:translate-x-0 transition-transform duration-300 ease-out">
           <div class="h-16 flex items-center px-4 border-b border-zinc-100 dark:border-zinc-800">
@@ -831,9 +841,8 @@
       </div>
     </div>
 
-    <!-- 头像裁剪弹窗 -->
     <div id="crop-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="裁剪头像">
-      <div id="crop-backdrop" class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+      <div id="crop-backdrop" class="absolute inset-0 bg-black/60"></div>
       <div class="relative w-full max-w-md rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-2xl p-6">
         <div class="flex items-center justify-between mb-4">
           <h3 class="font-semibold text-lg text-zinc-900 dark:text-zinc-100">调整头像</h3>
@@ -861,9 +870,8 @@
       </div>
     </div>
 
-    <!-- 文件预览弹窗 -->
     <div id="preview-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="文件预览">
-      <div id="preview-backdrop" class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
+      <div id="preview-backdrop" class="absolute inset-0 bg-black/70"></div>
       <div class="relative w-full max-w-4xl max-h-[90vh] rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-2xl flex flex-col overflow-hidden">
         <div class="flex items-center justify-between gap-4 px-5 py-3 border-b border-zinc-100 dark:border-zinc-800 shrink-0">
           <div class="min-w-0 flex-1">
@@ -895,12 +903,10 @@
       </div>
     </div>
 
-    <!-- 大肥鱼浮动按钮 -->
     <button id="ai-fab" type="button" aria-label="打开大肥鱼" class="fixed bottom-6 right-6 z-40 w-14 h-14 rounded-full bg-[#4D6BFE] text-white shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all duration-200 flex items-center justify-center overflow-hidden p-0">
       <img src="whale.png" alt="大肥鱼" class="w-full h-full object-cover" />
     </button>
 
-    <!-- 大肥鱼弹窗 -->
     <div id="ai-panel" class="hidden fixed bottom-24 right-6 z-40 w-[calc(100vw-3rem)] sm:w-96 h-[32rem] rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-2xl flex flex-col overflow-hidden" role="dialog" aria-modal="false" aria-label="大肥鱼">
       <div class="flex items-center justify-between gap-3 px-4 py-3 border-b border-zinc-100 dark:border-zinc-800 shrink-0">
         <div class="flex items-center gap-3 min-w-0">
@@ -2843,6 +2849,50 @@
         aiAttachmentPreview.appendChild(del)
       }
 
+      function renderAiPendingFile_loading(text) {
+        aiAttachmentPreview.innerHTML = ''
+        aiAttachmentPreview.classList.remove('hidden')
+        const spinner = document.createElement('div')
+        spinner.className = 'w-4 h-4 rounded-full border-2 border-zinc-300 dark:border-zinc-600 border-t-blue-500 animate-spin shrink-0'
+        aiAttachmentPreview.appendChild(spinner)
+        const textEl = document.createElement('span')
+        textEl.className = 'text-zinc-600 dark:text-zinc-400'
+        textEl.textContent = text || '处理中...'
+        aiAttachmentPreview.appendChild(textEl)
+      }
+
+      function compressAiImage(file) {
+        return new Promise((resolve) => {
+          if (!(file.type || '').startsWith('image/')) { resolve(file); return }
+          const reader = new FileReader()
+          reader.onload = (ev) => {
+            const img = new Image()
+            img.onload = () => {
+              const maxW = 1200
+              let w = img.width
+              let h = img.height
+              if (w > maxW) { h = Math.round((h * maxW) / w); w = maxW }
+              const canvas = document.createElement('canvas')
+              canvas.width = w
+              canvas.height = h
+              const ctx = canvas.getContext('2d')
+              ctx.imageSmoothingQuality = 'high'
+              ctx.drawImage(img, 0, 0, w, h)
+              canvas.toBlob((blob) => {
+                if (!blob) { resolve(file); return }
+                if (blob.size >= file.size) { resolve(file); return }
+                const newName = (file.name || 'image').replace(/\.[^.]+$/, '') + '.jpg'
+                resolve(new File([blob], newName, { type: 'image/jpeg' }))
+              }, 'image/jpeg', 0.8)
+            }
+            img.onerror = () => resolve(file)
+            img.src = ev.target.result
+          }
+          reader.onerror = () => resolve(file)
+          reader.readAsDataURL(file)
+        })
+      }
+
       async function uploadAiFile(file) {
         if (!currentUser) {
           alert('请先登录再上传文件')
@@ -2854,6 +2904,12 @@
           return
         }
         aiFileBtn.disabled = true
+        const isImg = (file.type || '').startsWith('image/')
+        if (isImg) {
+          renderAiPendingFile_loading('压缩中...')
+          file = await compressAiImage(file)
+        }
+        renderAiPendingFile_loading('上传中...')
         const safeName = file.name.replace(/[^\w.\-\u4e00-\u9fa5]/g, '_')
         const path = `ai/${currentUser.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safeName}`
         const { data, error } = await supabase.storage
@@ -2862,6 +2918,8 @@
         aiFileBtn.disabled = false
         if (error) {
           alert('上传失败：' + error.message)
+          aiPendingFile = null
+          renderAiPendingFile()
           return
         }
         const { data: u } = supabase.storage.from('uploads').getPublicUrl(data.path)
