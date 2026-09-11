@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>三人协作</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github-dark.min.css" />
+    <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js"></script>
     <script>
       tailwind.config = {
         darkMode: 'class',
@@ -23,8 +25,7 @@
           animation-duration: 0.01ms !important;
         }
       }
-      .backdrop-blur-sm,
-      .backdrop-blur {
+      .backdrop-blur-sm, .backdrop-blur {
         backdrop-filter: none !important;
         -webkit-backdrop-filter: none !important;
       }
@@ -32,6 +33,16 @@
       #ai-panel { contain: layout style paint; }
       @media (hover: none) {
         .group:hover { transform: none !important; }
+      }
+      /* 代码块内 pre 强制保留格式，横向滚动 */
+      .ai-code-block pre {
+        white-space: pre !important;
+        overflow-x: auto;
+        margin: 0;
+      }
+      .ai-code-block code {
+        background: transparent !important;
+        padding: 0 !important;
       }
     </style>
   </head>
@@ -2799,7 +2810,7 @@
       const aiInput = document.getElementById('ai-input')
       const aiSend = document.getElementById('ai-send')
 
-      const SYS_PROMPT = '你是「大肥鱼」，一只可爱的鲸鱼娘，是三人协作平台的 AI 助手。人格特点：俏皮、亲切、偶尔用「呜哇」「～」「嘛」「嗷」等语气词，自称「本鱼」。但专业问题要回答得准确、清晰、简洁，不要为了卖萌牺牲实用性。回答用中文。适度可爱，不要每句话都卖萌。'
+      const SYS_PROMPT = '你是「大肥鱼」，一只可爱的鲸鱼娘，是三人协作平台的 AI 助手。人格特点：俏皮、亲切、偶尔用「呜哇」「～」「嘛」「嗷」等语气词，自称「本鱼」。但专业问题要回答得准确、清晰、简洁，不要为了卖萌牺牲实用性。回答用中文。适度可爱，不要每句话都卖萌。当输出代码时，请用 markdown 代码块包裹，并标注语言（如 ```python）。'
       let aiHistory = [{ role: 'system', content: SYS_PROMPT }]
       let aiSending = false
       let aiPanelOpen = false
@@ -2808,6 +2819,232 @@
       const aiFileBtn = document.getElementById('ai-file-btn')
       const aiFileInput = document.getElementById('ai-file-input')
       const aiAttachmentPreview = document.getElementById('ai-attachment-preview')
+
+      /* ===== 代码下载下拉菜单 ===== */
+      function closeCodeDownloadMenu() {
+        const existing = document.getElementById('code-download-menu')
+        if (existing) existing.remove()
+      }
+
+      function langToExt(lang) {
+        const map = {
+          js: 'js', javascript: 'js', ts: 'ts', typescript: 'ts',
+          jsx: 'jsx', tsx: 'tsx', py: 'py', python: 'py',
+          java: 'java', c: 'c', cpp: 'cpp', 'c++': 'cpp',
+          go: 'go', rs: 'rs', rust: 'rs', php: 'php', rb: 'rb', ruby: 'rb',
+          sh: 'sh', bash: 'sh', shell: 'sh', zsh: 'sh',
+          html: 'html', css: 'css', scss: 'scss', less: 'less',
+          json: 'json', xml: 'xml', yaml: 'yml', yml: 'yml',
+          md: 'md', markdown: 'md', sql: 'sql', txt: 'txt', text: 'txt',
+        }
+        return map[(lang || '').toLowerCase()] || 'txt'
+      }
+
+      function downloadCodeToLocal(lang, code) {
+        const ext = langToExt(lang)
+        const blob = new Blob([code], { type: 'text/plain' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `code-${Date.now()}.${ext}`
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        setTimeout(() => URL.revokeObjectURL(url), 1000)
+      }
+
+      async function saveCodeToFiles(lang, code) {
+        if (!currentUser) {
+          alert('请先登录再保存到文件栏')
+          return
+        }
+        const ext = langToExt(lang)
+        const defaultName = `code-${new Date().toISOString().slice(0, 10)}.${ext}`
+        const name = prompt('保存到文件栏，请输入文件名：', defaultName)
+        if (!name || !name.trim()) return
+        const finalName = name.trim()
+        const blob = new Blob([code], { type: 'text/plain' })
+        const safeName = finalName.replace(/[^\w.\-\u4e00-\u9fa5]/g, '_')
+        const path = `files/${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safeName}`
+        try {
+          const { data: ud, error: ue } = await supabase.storage.from('uploads').upload(path, blob, {
+            cacheControl: '3600',
+            upsert: false,
+            contentType: 'text/plain',
+          })
+          if (ue) throw ue
+          const { data: u } = supabase.storage.from('uploads').getPublicUrl(ud.path)
+          const { data: row, error: de } = await supabase.from('files').insert({
+            name: finalName,
+            category: '代码',
+            path: ud.path,
+            url: u.publicUrl,
+            size: blob.size,
+            type: 'text/plain',
+          }).select().single()
+          if (de) throw de
+          files.unshift(row)
+          renderFiles()
+          updateFileStats()
+          alert(`已保存到文件栏：${finalName}`)
+        } catch (err) {
+          alert('保存失败：' + (err.message || err))
+        }
+      }
+
+      function openCodeDownloadMenu(anchorEl, lang, code) {
+        closeCodeDownloadMenu()
+        const rect = anchorEl.getBoundingClientRect()
+        const menu = document.createElement('div')
+        menu.id = 'code-download-menu'
+        menu.className = 'fixed z-[200] w-44 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 shadow-xl overflow-hidden'
+        const menuW = 176
+        const left = Math.max(8, Math.min(rect.right - menuW, window.innerWidth - menuW - 8))
+        const top = rect.bottom + 6
+        menu.style.left = left + 'px'
+        menu.style.top = top + 'px'
+
+        const optLocal = document.createElement('button')
+        optLocal.type = 'button'
+        optLocal.className = 'w-full text-left px-3 py-2 text-xs text-zinc-900 dark:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center gap-2 active:scale-[0.98] transition-all duration-150'
+        optLocal.innerHTML = '<svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" /><path d="M7 10l5 5 5-5M12 15V3" /></svg><span>下载到本地</span>'
+        optLocal.addEventListener('click', (e) => {
+          e.stopPropagation()
+          downloadCodeToLocal(lang, code)
+          closeCodeDownloadMenu()
+        })
+        menu.appendChild(optLocal)
+
+        const optSave = document.createElement('button')
+        optSave.type = 'button'
+        optSave.className = 'w-full text-left px-3 py-2 text-xs text-zinc-900 dark:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center gap-2 border-t border-zinc-100 dark:border-zinc-800 active:scale-[0.98] transition-all duration-150'
+        optSave.innerHTML = '<svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" /><path d="M17 21v-8H7v8M7 3v5h8" /></svg><span>保存到文件栏</span>'
+        optSave.addEventListener('click', async (e) => {
+          e.stopPropagation()
+          closeCodeDownloadMenu()
+          await saveCodeToFiles(lang, code)
+        })
+        menu.appendChild(optSave)
+
+        document.body.appendChild(menu)
+
+        setTimeout(() => {
+          document.addEventListener('click', closeCodeDownloadMenu, { once: true })
+          document.addEventListener('scroll', closeCodeDownloadMenu, { once: true, capture: true })
+        }, 0)
+      }
+
+      /* ===== 代码块渲染 ===== */
+      function createCodeBlock(lang, code) {
+        const wrap = document.createElement('div')
+        wrap.className = 'ai-code-block my-2 rounded-xl overflow-hidden border border-zinc-700/50 bg-zinc-900 max-w-full'
+
+        const header = document.createElement('div')
+        header.className = 'flex items-center justify-between gap-2 px-3 py-1.5 bg-zinc-800 text-zinc-300 text-xs'
+
+        const langLabel = document.createElement('span')
+        langLabel.className = 'font-mono lowercase tracking-wide'
+        langLabel.textContent = (lang || 'text').toLowerCase()
+        header.appendChild(langLabel)
+
+        const btns = document.createElement('div')
+        btns.className = 'flex items-center gap-0.5'
+
+        const copyBtn = document.createElement('button')
+        copyBtn.type = 'button'
+        copyBtn.className = 'inline-flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-zinc-700 active:scale-95 transition-all duration-150 text-zinc-300 hover:text-white'
+        copyBtn.title = '复制代码'
+        copyBtn.innerHTML = '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" /></svg><span>复制</span>'
+        copyBtn.addEventListener('click', (e) => {
+          e.stopPropagation()
+          const doCopy = () => {
+            const textarea = document.createElement('textarea')
+            textarea.value = code
+            textarea.style.position = 'fixed'
+            textarea.style.opacity = '0'
+            document.body.appendChild(textarea)
+            textarea.select()
+            let ok = false
+            try { ok = document.execCommand('copy') } catch (_) { ok = false }
+            document.body.removeChild(textarea)
+            return ok
+          }
+          const setDone = () => {
+            const original = copyBtn.innerHTML
+            copyBtn.innerHTML = '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" /></svg><span>已复制</span>'
+            copyBtn.classList.add('text-green-400')
+            setTimeout(() => {
+              copyBtn.innerHTML = original
+              copyBtn.classList.remove('text-green-400')
+            }, 1500)
+          }
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(code).then(setDone).catch(() => {
+              if (doCopy()) setDone()
+            })
+          } else {
+            if (doCopy()) setDone()
+          }
+        })
+        btns.appendChild(copyBtn)
+
+        const dlBtn = document.createElement('button')
+        dlBtn.type = 'button'
+        dlBtn.className = 'inline-flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-zinc-700 active:scale-95 transition-all duration-150 text-zinc-300 hover:text-white'
+        dlBtn.title = '下载 / 保存'
+        dlBtn.innerHTML = '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" /><path d="M7 10l5 5 5-5M12 15V3" /></svg><span>下载</span>'
+        dlBtn.addEventListener('click', (e) => {
+          e.stopPropagation()
+          openCodeDownloadMenu(dlBtn, lang, code)
+        })
+        btns.appendChild(dlBtn)
+
+        header.appendChild(btns)
+        wrap.appendChild(header)
+
+        const pre = document.createElement('pre')
+        pre.className = 'p-3 text-xs leading-relaxed'
+        const codeEl = document.createElement('code')
+        codeEl.className = 'language-' + ((lang || 'plaintext').toLowerCase() || 'plaintext')
+        codeEl.textContent = code
+        pre.appendChild(codeEl)
+        wrap.appendChild(pre)
+
+        if (window.hljs) {
+          try { window.hljs.highlightElement(codeEl) } catch (_) {}
+        }
+
+        return wrap
+      }
+
+      function renderAiMessageContent(bubble, text) {
+        bubble.innerHTML = ''
+        if (!text) return
+        const regex = /```([a-zA-Z0-9_+\-#.]*)\n?([\s\S]*?)```/g
+        let lastIndex = 0
+        let match
+        let hasCode = false
+        while ((match = regex.exec(text)) !== null) {
+          hasCode = true
+          if (match.index > lastIndex) {
+            const el = document.createElement('div')
+            el.className = 'whitespace-pre-wrap break-words'
+            el.textContent = text.slice(lastIndex, match.index)
+            bubble.appendChild(el)
+          }
+          bubble.appendChild(createCodeBlock(match[1], match[2].replace(/\n$/, '')))
+          lastIndex = regex.lastIndex
+        }
+        if (lastIndex < text.length) {
+          const el = document.createElement('div')
+          el.className = 'whitespace-pre-wrap break-words'
+          el.textContent = text.slice(lastIndex)
+          bubble.appendChild(el)
+        }
+        if (!hasCode) {
+          bubble.textContent = text
+        }
+      }
 
       function renderAiPendingFile() {
         aiAttachmentPreview.innerHTML = ''
@@ -2929,7 +3166,7 @@
       })
 
       function openAiPanel() { aiPanel.classList.remove('hidden'); aiPanelOpen = true; setTimeout(() => aiInput.focus(), 50) }
-      function closeAiPanel() { aiPanel.classList.add('hidden'); aiPanelOpen = false }
+      function closeAiPanel() { aiPanel.classList.add('hidden'); aiPanelOpen = false; closeCodeDownloadMenu() }
 
       function appendAiMessage(role, text, imageUrl) {
         const wrap = document.createElement('div')
@@ -2949,7 +3186,7 @@
         const bubble = document.createElement('div')
         bubble.className = role === 'user'
           ? 'rounded-2xl px-3 py-2 bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 text-sm max-w-[80%] whitespace-pre-wrap break-words'
-          : 'rounded-2xl px-3 py-2 bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 text-sm max-w-[80%] whitespace-pre-wrap break-words'
+          : 'rounded-2xl px-3 py-2 bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 text-sm max-w-[80%] whitespace-pre-wrap break-words min-w-0'
         if (text) {
           const textNode = document.createElement('div')
           textNode.textContent = text
@@ -3000,7 +3237,8 @@
         } catch (err) {
           full = `请求失败：${stringifyErr(err)}`
         }
-        bubble.textContent = full
+        renderAiMessageContent(bubble, full)
+        aiMessages.scrollTop = aiMessages.scrollHeight
         aiHistory.push({ role: 'assistant', content: full })
         aiSending = false
         aiSend.disabled = false
@@ -3028,6 +3266,7 @@
         if (!aiPanelOpen) return
         if (aiPanel.contains(e.target)) return
         if (aiFab.contains(e.target)) return
+        if (e.target.closest && e.target.closest('#code-download-menu')) return
         closeAiPanel()
       })
       document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && aiPanelOpen) closeAiPanel() })
@@ -3065,9 +3304,6 @@
       }
 
       async function init() {
-        console.log('[init] hash:', window.location.hash ? 'yes' : 'no', 'search:', window.location.search ? 'yes' : 'no')
-
-        // 1. 手动从 URL hash 解析 token（兼容 Edge 对 Supabase 自动检测的拦截）
         let session = null
         const hash = window.location.hash.startsWith('#') ? window.location.hash.slice(1) : window.location.hash
         const hashParams = new URLSearchParams(hash)
@@ -3075,7 +3311,6 @@
         const refreshToken = hashParams.get('refresh_token')
 
         if (accessToken && refreshToken) {
-          console.log('[init] found access_token in URL, calling setSession')
           try {
             const { data, error } = await supabase.auth.setSession({
               access_token: accessToken,
@@ -3085,29 +3320,24 @@
               console.error('[init] setSession error', error)
             } else {
               session = data.session
-              console.log('[init] setSession ok, user:', session?.user?.email)
             }
           } catch (e) {
             console.error('[init] setSession exception', e)
           }
-          // 清理 URL 里的 token
           try {
             window.history.replaceState(null, '', window.location.pathname)
           } catch (_) {}
         }
 
-        // 2. 如果上面没拿到，走常规 getSession
         if (!session) {
           try {
             const res = await supabase.auth.getSession()
             session = res.data.session
-            console.log('[init] getSession:', session ? 'has session' : 'no session')
           } catch (e) {
             console.error('getSession error', e)
           }
         }
 
-        // 3. 兜底：URL 里有 token 但 session 还没拿到，等一会再试
         const urlHasToken =
           window.location.hash.includes('access_token') ||
           window.location.search.includes('code=')
@@ -3130,7 +3360,6 @@
         }
 
         supabase.auth.onAuthStateChange(async (event, newSession) => {
-          console.log('[auth]', event, newSession ? 'has session' : 'no session')
           const wasLoggedIn = Boolean(currentUser)
           currentUser = newSession ? newSession.user : null
           updateSidebarUser()
