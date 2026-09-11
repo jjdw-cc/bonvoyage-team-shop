@@ -8,14 +8,10 @@
     <script>
       tailwind.config = {
         darkMode: 'class',
-        future: {
-          hoverOnlyWhenSupported: true,
-        },
+        future: { hoverOnlyWhenSupported: true },
         theme: {
           extend: {
-            fontFamily: {
-              sans: ['system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
-            },
+            fontFamily: { sans: ['system-ui', '-apple-system', 'Segoe UI', 'sans-serif'] },
           },
         },
       }
@@ -27,17 +23,13 @@
           animation-duration: 0.01ms !important;
         }
       }
-      /* ===== 性能优化：减少 Edge 掉帧 ===== */
-      /* 1. Edge 对 backdrop-filter 支持性能较差，禁用全屏背景模糊 */
       .backdrop-blur-sm,
       .backdrop-blur {
         backdrop-filter: none !important;
         -webkit-backdrop-filter: none !important;
       }
-      /* 2. 侧边栏与 AI 面板：隔离渲染范围，减少重排 */
       #sidebar { contain: layout style; }
       #ai-panel { contain: layout style paint; }
-      /* 3. 卡片 hover 位移只在支持 hover 的设备启用 */
       @media (hover: none) {
         .group:hover { transform: none !important; }
       }
@@ -964,7 +956,16 @@
       import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
       const supabase = createClient(
         'https://xmyhgelfuxlvzpxqoaer.supabase.co',
-        'sb_publishable_717gtd0jY6aoeEGx2sAi-Q_DD7tlM9n'
+        'sb_publishable_717gtd0jY6aoeEGx2sAi-Q_DD7tlM9n',
+        {
+          auth: {
+            persistSession: true,
+            autoRefreshToken: true,
+            detectSessionInUrl: true,
+            storage: window.localStorage,
+            flowType: 'implicit',
+          },
+        }
       )
 
       const EMAIL_DOMAIN = 'bonvoyage.click'
@@ -2456,19 +2457,7 @@
         clearLoginMessage()
         loginUsername.value = ''
         loginPassword.value = ''
-        updateSidebarUser()
-        await upsertProfile()
-        await loadTasks()
-        await loadSchedules()
-        await loadFiles()
-        await loadProjects()
-        await loadFriends()
-        renderTasks()
-        renderFiles()
-        updateFileStats()
-        renderProjects()
-        renderFriends()
-        renderUserModal()
+        await loadAllForUser()
       }
       loginSubmit.addEventListener('click', handleUsernameLogin)
       loginPassword.addEventListener('keydown', (e) => {
@@ -2779,7 +2768,11 @@
       })
 
       userGithubLogin.addEventListener('click', async () => {
-        const { error } = await supabase.auth.signInWithOAuth({ provider: 'github', options: { redirectTo: window.location.href } })
+        const base = window.location.origin + window.location.pathname
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider: 'github',
+          options: { redirectTo: base },
+        })
         if (error) console.error(error.message)
       })
 
@@ -3055,34 +3048,106 @@
         else if (sidebar.getAttribute('data-mobile-open') === 'true') closeMobileSidebar()
       })
 
-      async function init() {
-        const { data: { session } } = await supabase.auth.getSession()
-        if (session) {
-          currentUser = session.user
-          updateSidebarUser()
-          await upsertProfile()
-          await loadTasks()
-          await loadSchedules()
-          await loadFiles()
-          await loadProjects()
-          await loadFriends()
-        }
+      async function loadAllForUser() {
+        updateSidebarUser()
+        await upsertProfile()
+        await loadTasks()
+        await loadSchedules()
+        await loadFiles()
+        await loadProjects()
+        await loadFriends()
         renderTasks()
-        renderUserModal()
         renderFiles()
         updateFileStats()
         renderProjects()
         renderFriends()
-        supabase.auth.onAuthStateChange(async (_event, newSession) => {
+        renderUserModal()
+      }
+
+      async function init() {
+        console.log('[init] hash:', window.location.hash ? 'yes' : 'no', 'search:', window.location.search ? 'yes' : 'no')
+
+        // 1. 手动从 URL hash 解析 token（兼容 Edge 对 Supabase 自动检测的拦截）
+        let session = null
+        const hash = window.location.hash.startsWith('#') ? window.location.hash.slice(1) : window.location.hash
+        const hashParams = new URLSearchParams(hash)
+        const accessToken = hashParams.get('access_token')
+        const refreshToken = hashParams.get('refresh_token')
+
+        if (accessToken && refreshToken) {
+          console.log('[init] found access_token in URL, calling setSession')
+          try {
+            const { data, error } = await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken,
+            })
+            if (error) {
+              console.error('[init] setSession error', error)
+            } else {
+              session = data.session
+              console.log('[init] setSession ok, user:', session?.user?.email)
+            }
+          } catch (e) {
+            console.error('[init] setSession exception', e)
+          }
+          // 清理 URL 里的 token
+          try {
+            window.history.replaceState(null, '', window.location.pathname)
+          } catch (_) {}
+        }
+
+        // 2. 如果上面没拿到，走常规 getSession
+        if (!session) {
+          try {
+            const res = await supabase.auth.getSession()
+            session = res.data.session
+            console.log('[init] getSession:', session ? 'has session' : 'no session')
+          } catch (e) {
+            console.error('getSession error', e)
+          }
+        }
+
+        // 3. 兜底：URL 里有 token 但 session 还没拿到，等一会再试
+        const urlHasToken =
+          window.location.hash.includes('access_token') ||
+          window.location.search.includes('code=')
+        if (!session && urlHasToken) {
+          await new Promise((r) => setTimeout(r, 800))
+          const retry = await supabase.auth.getSession()
+          session = retry.data.session
+        }
+
+        if (session) {
+          currentUser = session.user
+          await loadAllForUser()
+        } else {
+          renderTasks()
+          renderUserModal()
+          renderFiles()
+          updateFileStats()
+          renderProjects()
+          renderFriends()
+        }
+
+        supabase.auth.onAuthStateChange(async (event, newSession) => {
+          console.log('[auth]', event, newSession ? 'has session' : 'no session')
+          const wasLoggedIn = Boolean(currentUser)
           currentUser = newSession ? newSession.user : null
           updateSidebarUser()
           renderUserModal()
-          if (currentUser) {
+          if (currentUser && !wasLoggedIn) {
+            await loadAllForUser()
+          } else if (currentUser) {
             await upsertProfile()
             await loadFriends()
             renderFriends()
           } else {
-            friends = []
+            tasks = []; schedules = {}; files = []; projects = []; friends = []
+            activeProjectId = null
+            renderTasks()
+            renderFiles()
+            updateFileStats()
+            renderProjects()
             renderFriends()
           }
         })
