@@ -34,7 +34,6 @@
       @media (hover: none) {
         .group:hover { transform: none !important; }
       }
-      /* 代码块内 pre 强制保留格式，横向滚动 */
       .ai-code-block pre {
         white-space: pre !important;
         overflow-x: auto;
@@ -918,7 +917,7 @@
           </div>
           <div class="min-w-0">
             <p class="font-semibold text-zinc-900 dark:text-zinc-100 text-sm">大肥鱼</p>
-            <p class="text-zinc-500 dark:text-zinc-400 text-xs">DeepSeek 驱动</p>
+            <p id="ai-model-label" class="text-zinc-500 dark:text-zinc-400 text-xs">DeepSeek Flash · DeepSeek 驱动</p>
           </div>
         </div>
         <div class="flex items-center gap-1 shrink-0">
@@ -2815,12 +2814,52 @@
       let aiSending = false
       let aiPanelOpen = false
       let aiPendingFile = null
+      let aiTypewriterTimer = null
 
       const aiFileBtn = document.getElementById('ai-file-btn')
       const aiFileInput = document.getElementById('ai-file-input')
       const aiAttachmentPreview = document.getElementById('ai-attachment-preview')
+      const aiModelLabel = document.getElementById('ai-model-label')
 
-      /* ===== 代码下载下拉菜单 ===== */
+      const AI_MODEL_DISPLAY = {
+        'deepseek-chat': 'DeepSeek Chat',
+        'deepseek-flash': 'DeepSeek Flash',
+        'deepseek-reasoner': 'DeepSeek R1',
+      }
+      function updateAiModelLabel(model) {
+        if (!model || !aiModelLabel) return
+        const display = AI_MODEL_DISPLAY[model] || model
+        aiModelLabel.textContent = `${display} · DeepSeek 驱动`
+      }
+
+      function typewriterReveal(bubble, fullText, onDone) {
+        if (aiTypewriterTimer) { clearInterval(aiTypewriterTimer); aiTypewriterTimer = null }
+        bubble.innerHTML = ''
+        const wrap = document.createElement('div')
+        wrap.className = 'whitespace-pre-wrap break-words'
+        bubble.appendChild(wrap)
+        const len = fullText.length
+        let i = 0
+        let chunk = 1
+        let interval = 22
+        if (len > 1500) { chunk = 6; interval = 12 }
+        else if (len > 800) { chunk = 4; interval = 14 }
+        else if (len > 300) { chunk = 2; interval = 18 }
+        aiTypewriterTimer = setInterval(() => {
+          i += chunk
+          if (i >= len) {
+            i = len
+            wrap.textContent = fullText
+            clearInterval(aiTypewriterTimer)
+            aiTypewriterTimer = null
+            if (typeof onDone === 'function') onDone()
+            return
+          }
+          wrap.textContent = fullText.slice(0, i)
+          aiMessages.scrollTop = aiMessages.scrollHeight
+        }, interval)
+      }
+
       function closeCodeDownloadMenu() {
         const existing = document.getElementById('code-download-menu')
         if (existing) existing.remove()
@@ -2934,7 +2973,6 @@
         }, 0)
       }
 
-      /* ===== 代码块渲染 ===== */
       function createCodeBlock(lang, code) {
         const wrap = document.createElement('div')
         wrap.className = 'ai-code-block my-2 rounded-xl overflow-hidden border border-zinc-700/50 bg-zinc-900 max-w-full'
@@ -3017,32 +3055,62 @@
         return wrap
       }
 
+      function appendPlainText(parent, text) {
+        if (!text) return
+        const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/g)
+        parts.forEach((part) => {
+          if (!part) return
+          if (part.startsWith('**') && part.endsWith('**') && part.length > 4) {
+            const el = document.createElement('strong')
+            el.className = 'font-semibold'
+            el.textContent = part.slice(2, -2)
+            parent.appendChild(el)
+          } else if (part.startsWith('*') && part.endsWith('*') && part.length > 2) {
+            const el = document.createElement('em')
+            el.textContent = part.slice(1, -1)
+            parent.appendChild(el)
+          } else {
+            const el = document.createElement('div')
+            el.className = 'whitespace-pre-wrap break-words'
+            el.textContent = part
+            parent.appendChild(el)
+          }
+        })
+      }
+
       function renderAiMessageContent(bubble, text) {
         bubble.innerHTML = ''
         if (!text) return
-        const regex = /```([a-zA-Z0-9_+\-#.]*)\n?([\s\S]*?)```/g
+        const regex = /(`{3,})[ \t]*([a-zA-Z0-9_+\-#.]*)[^\n]*\n([\s\S]*?)\1/g
         let lastIndex = 0
         let match
         let hasCode = false
-        while ((match = regex.exec(text)) !== null) {
+        let safety = 0
+        while ((match = regex.exec(text)) !== null && safety < 200) {
+          safety++
           hasCode = true
           if (match.index > lastIndex) {
-            const el = document.createElement('div')
-            el.className = 'whitespace-pre-wrap break-words'
-            el.textContent = text.slice(lastIndex, match.index)
-            bubble.appendChild(el)
+            appendPlainText(bubble, text.slice(lastIndex, match.index))
           }
-          bubble.appendChild(createCodeBlock(match[1], match[2].replace(/\n$/, '')))
+          const lang = match[2] || ''
+          let code = match[3] || ''
+          code = code.replace(/\n$/, '')
+          bubble.appendChild(createCodeBlock(lang, code))
           lastIndex = regex.lastIndex
         }
         if (lastIndex < text.length) {
-          const el = document.createElement('div')
-          el.className = 'whitespace-pre-wrap break-words'
-          el.textContent = text.slice(lastIndex)
-          bubble.appendChild(el)
+          appendPlainText(bubble, text.slice(lastIndex))
         }
         if (!hasCode) {
-          bubble.textContent = text
+          const simpleIdx = text.indexOf('```')
+          if (simpleIdx === -1) {
+            bubble.textContent = text
+          } else {
+            const el = document.createElement('div')
+            el.className = 'whitespace-pre-wrap break-words'
+            el.textContent = text
+            bubble.appendChild(el)
+          }
         }
       }
 
@@ -3231,14 +3299,17 @@
           if (pendingFileSnapshot) body.fileUrl = pendingFileSnapshot.url
           const { data, error } = await supabase.functions.invoke('super-responder', { body })
           if (error) throw error
+          if (data?.model) updateAiModelLabel(data.model)
           if (data?.choices?.[0]?.message?.content) full = data.choices[0].message.content
           else if (data?.error) full = `错误：${stringifyErr(data.error)}`
           else full = `未获取到回复，原始返回：${stringifyErr(data)}`
         } catch (err) {
           full = `请求失败：${stringifyErr(err)}`
         }
-        renderAiMessageContent(bubble, full)
-        aiMessages.scrollTop = aiMessages.scrollHeight
+        typewriterReveal(bubble, full, () => {
+          renderAiMessageContent(bubble, full)
+          aiMessages.scrollTop = aiMessages.scrollHeight
+        })
         aiHistory.push({ role: 'assistant', content: full })
         aiSending = false
         aiSend.disabled = false
@@ -3246,6 +3317,7 @@
       }
 
       function resetAiChat() {
+        if (aiTypewriterTimer) { clearInterval(aiTypewriterTimer); aiTypewriterTimer = null }
         aiHistory = [{ role: 'system', content: SYS_PROMPT }]
         aiMessages.innerHTML = ''
         aiPendingFile = null
