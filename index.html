@@ -2230,11 +2230,11 @@
         syncBodyScroll()
       }
 
-      taskAddOpen.addEventListener('click', openTaskModal)
+            taskAddOpen.addEventListener('click', () => openTaskModal())
       taskClose.addEventListener('click', closeTaskModal)
       taskBackdrop.addEventListener('click', closeTaskModal)
-      dashAddTask.addEventListener('click', openTaskModal)
-      dashNewTask.addEventListener('click', openTaskModal)
+            dashAddTask.addEventListener('click', () => openTaskModal())
+            dashNewTask.addEventListener('click', () => openTaskModal())
 
             taskSubmit.addEventListener('click', async () => {
         const title = taskTitleInput.value.trim()
