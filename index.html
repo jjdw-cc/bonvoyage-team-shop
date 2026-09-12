@@ -589,7 +589,7 @@
             <div class="p-3 rounded-xl bg-blue-50 dark:bg-blue-900/20">
               <svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></svg>
             </div>
-            <h2 class="font-semibold text-zinc-900 dark:text-zinc-100 text-lg md:text-xl">添加任务</h2>
+                        <h2 id="task-modal-title" class="font-semibold text-zinc-900 dark:text-zinc-100 text-lg md:text-xl">添加任务</h2>
           </div>
           <button id="task-close" type="button" class="p-2 rounded-xl text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-95 transition-all duration-200">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" /></svg>
@@ -598,6 +598,10 @@
         <label class="block mb-4">
           <span class="block text-sm text-zinc-600 dark:text-zinc-400 mb-2">任务命名</span>
           <input id="task-title-input" type="text" placeholder="输入任务名称..." class="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl px-4 py-2 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" />
+        </label>
+                <label class="block mb-4">
+          <span class="block text-sm text-zinc-600 dark:text-zinc-400 mb-2">任务简介</span>
+          <textarea id="task-desc-input" rows="3" placeholder="简单描述任务内容..." class="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl px-4 py-2 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all resize-none"></textarea>
         </label>
         <div class="mb-6">
           <span class="block text-sm text-zinc-600 dark:text-zinc-400 mb-2">任务标签</span>
@@ -608,6 +612,29 @@
           <div id="task-tag-list" class="flex flex-wrap gap-3"></div>
         </div>
         <button id="task-submit" type="button" class="w-full px-4 py-2 md:px-6 md:py-3 rounded-xl font-medium transition-colors bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 active:scale-95 transition-all duration-200">创建任务</button>
+      </div>
+    </div>
+        <!-- 任务详情弹窗 -->
+    <div id="task-detail-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog">
+      <div id="task-detail-backdrop" class="absolute inset-0 bg-black/40"></div>
+      <div class="relative w-full max-w-lg rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-lg p-6 max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between gap-4 mb-6">
+          <div class="flex items-center gap-4 min-w-0">
+            <div class="p-3 rounded-xl bg-blue-50 dark:bg-blue-900/20 shrink-0">
+              <svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M4 6h16M4 12h16M4 18h10" />
+              </svg>
+            </div>
+            <div class="min-w-0">
+              <h2 class="font-semibold text-zinc-900 dark:text-zinc-100 text-lg md:text-xl">任务明细</h2>
+              <p id="task-detail-subtitle" class="text-zinc-600 dark:text-zinc-400 text-xs truncate"></p>
+            </div>
+          </div>
+          <button id="task-detail-close" type="button" class="shrink-0 p-2 rounded-xl text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-95 transition-all duration-200">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" /></svg>
+          </button>
+        </div>
+        <div id="task-detail-body" class="flex flex-col gap-4"></div>
       </div>
     </div>
 
@@ -997,6 +1024,7 @@
       function syncBodyScroll() {
         const cropModalEl = document.getElementById('crop-modal')
         const previewModalEl = document.getElementById('preview-modal')
+                const taskDetailModalEl = document.getElementById('task-detail-modal')
         const anyModalOpen =
           !calendarModal.classList.contains('hidden') ||
           !taskModal.classList.contains('hidden') ||
@@ -1005,6 +1033,7 @@
           !fileModal.classList.contains('hidden') ||
           !projectModal.classList.contains('hidden') ||
           !friendsModal.classList.contains('hidden') ||
+          (taskDetailModalEl && !taskDetailModalEl.classList.contains('hidden')) ||
           (cropModalEl && !cropModalEl.classList.contains('hidden')) ||
           (previewModalEl && !previewModalEl.classList.contains('hidden'))
         const mobileSidebarOpen = sidebar.getAttribute('data-mobile-open') === 'true'
@@ -1806,6 +1835,8 @@
       const taskClose = document.getElementById('task-close')
       const taskBackdrop = document.getElementById('task-backdrop')
       const taskTitleInput = document.getElementById('task-title-input')
+      const taskDescInput = document.getElementById('task-desc-input')
+      const taskModalTitle = document.getElementById('task-modal-title')
       const taskTagInput = document.getElementById('task-tag-input')
       const taskTagAdd = document.getElementById('task-tag-add')
       const taskTagList = document.getElementById('task-tag-list')
@@ -1906,6 +1937,53 @@
         return c
       }
 
+            function getReportedUsers(reports) {
+        const seen = new Set()
+        const users = []
+        ;(reports || []).forEach((r) => {
+          const key = r.user_id || r.nickname || r.avatar_url
+          if (!key || seen.has(key)) return
+          seen.add(key)
+          users.push({ avatar_url: r.avatar_url, nickname: r.nickname || '用户' })
+        })
+        return users
+      }
+
+      function createAvatarStack(reports) {
+        const users = getReportedUsers(reports)
+        const wrap = document.createElement('div')
+        wrap.className = 'flex items-center shrink-0'
+        if (users.length === 0) return wrap
+        const max = 3
+        const shown = users.slice(0, max)
+        const rest = users.length - shown.length
+        shown.forEach((u, idx) => {
+          const a = document.createElement('div')
+          a.className = 'w-6 h-6 rounded-full overflow-hidden border-2 border-white dark:border-zinc-900 bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center'
+          if (idx > 0) a.style.marginLeft = '-8px'
+          if (u.avatar_url) {
+            const img = document.createElement('img')
+            img.src = u.avatar_url
+            img.alt = u.nickname
+            img.className = 'w-full h-full object-cover'
+            a.appendChild(img)
+          } else {
+            a.innerHTML = '<svg class="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4" /><path d="M4 21v-1a6 6 0 016-6h4a6 6 0 016 6v1" /></svg>'
+          }
+          a.title = u.nickname
+          wrap.appendChild(a)
+        })
+        if (rest > 0) {
+          const more = document.createElement('div')
+          more.className = 'w-6 h-6 rounded-full border-2 border-white dark:border-zinc-900 bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-[10px] font-medium text-zinc-600 dark:text-zinc-300'
+          more.style.marginLeft = '-8px'
+          more.textContent = '+' + rest
+          more.title = `还有 ${rest} 人`
+          wrap.appendChild(more)
+        }
+        return wrap
+      }
+
       function renderTasks() {
         taskList.innerHTML = ''
         const visible = tasks.filter(matchesKeyword)
@@ -1933,18 +2011,35 @@
             left.appendChild(wrap)
           }
           if (task.reports?.length > 0) {
-            const badge = document.createElement('span')
-            badge.className = 'shrink-0 px-2 py-0.5 rounded-lg bg-purple-50 dark:bg-purple-900/20 text-purple-500 text-xs whitespace-nowrap'
-            badge.textContent = `已上报 ${task.reports.length}`
-            left.appendChild(badge)
+            left.appendChild(createAvatarStack(task.reports))
           }
+
           const actions = document.createElement('div')
-          actions.className = 'flex items-center gap-3 shrink-0'
+          actions.className = 'flex items-center gap-1 shrink-0'
+
+          const eBtn = document.createElement('button')
+          eBtn.type = 'button'
+          eBtn.setAttribute('aria-label', '编辑任务')
+          eBtn.className = 'p-2 rounded-xl text-zinc-400 dark:text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-blue-500 active:scale-95 transition-all duration-200'
+          eBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4 12.5-12.5z" /></svg>'
+          eBtn.addEventListener('click', () => openTaskModal(task.id))
+          actions.appendChild(eBtn)
+
+          const mBtn = document.createElement('button')
+          mBtn.type = 'button'
+          mBtn.setAttribute('aria-label', '查看任务明细')
+          mBtn.className = 'p-2 rounded-xl text-zinc-400 dark:text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-700 dark:hover:text-zinc-200 active:scale-95 transition-all duration-200'
+          mBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5" fill="currentColor" /><circle cx="12" cy="12" r="1.5" fill="currentColor" /><circle cx="19" cy="12" r="1.5" fill="currentColor" /></svg>'
+          mBtn.addEventListener('click', () => openTaskDetail(task.id))
+          actions.appendChild(mBtn)
+
           const rBtn = document.createElement('button')
           rBtn.type = 'button'
-          rBtn.className = 'px-4 py-2 rounded-xl font-medium text-sm text-zinc-900 dark:text-zinc-100 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 active:scale-95 transition-all duration-200'
+          rBtn.className = 'px-3 py-1.5 rounded-xl font-medium text-xs text-zinc-900 dark:text-zinc-100 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 active:scale-95 transition-all duration-200'
           rBtn.textContent = '上报'
           rBtn.addEventListener('click', () => openReport(task.id))
+          actions.appendChild(rBtn)
+
           const dBtn = document.createElement('button')
           dBtn.type = 'button'
           dBtn.setAttribute('aria-label', '删除任务')
@@ -1955,12 +2050,128 @@
             tasks = tasks.filter((t) => t.id !== task.id)
             renderTasks()
           })
-          actions.appendChild(rBtn); actions.appendChild(dBtn)
+          actions.appendChild(dBtn)
+
           li.appendChild(left); li.appendChild(actions)
           taskList.appendChild(li)
         })
         updateStats(); renderDashboard()
       }
+
+      function openTaskDetail(taskId) {
+        const task = tasks.find((t) => t.id === taskId)
+        if (!task) return
+        currentDetailTaskId = taskId
+        taskDetailSubtitle.textContent = task.title
+        taskDetailBody.innerHTML = ''
+
+        const headWrap = document.createElement('div')
+        headWrap.className = 'rounded-2xl border border-zinc-100 dark:border-zinc-800 p-4 bg-zinc-50 dark:bg-zinc-800/50'
+        const headTitle = document.createElement('p')
+        headTitle.className = 'text-sm font-medium text-zinc-900 dark:text-zinc-100 mb-1'
+        headTitle.textContent = task.title
+        headWrap.appendChild(headTitle)
+        const statusEl = document.createElement('p')
+        statusEl.className = 'text-xs ' + (task.done ? 'text-green-500' : 'text-blue-500')
+        statusEl.textContent = task.done ? '已完成' : '进行中'
+        headWrap.appendChild(statusEl)
+        taskDetailBody.appendChild(headWrap)
+
+        const descSection = document.createElement('div')
+        const descLabel = document.createElement('p')
+        descLabel.className = 'text-xs text-zinc-500 dark:text-zinc-400 mb-1'
+        descLabel.textContent = '任务简介'
+        const descText = document.createElement('p')
+        descText.className = 'text-sm text-zinc-900 dark:text-zinc-100 whitespace-pre-wrap break-words'
+        descText.textContent = task.description || '（未填写）'
+        descSection.appendChild(descLabel); descSection.appendChild(descText)
+        taskDetailBody.appendChild(descSection)
+
+        if (task.tags?.length > 0) {
+          const tagSection = document.createElement('div')
+          const tagLabel = document.createElement('p')
+          tagLabel.className = 'text-xs text-zinc-500 dark:text-zinc-400 mb-2'
+          tagLabel.textContent = '标签'
+          const tagWrap = document.createElement('div')
+          tagWrap.className = 'flex flex-wrap gap-2'
+          task.tags.forEach((t) => tagWrap.appendChild(createTagChip(t)))
+          tagSection.appendChild(tagLabel); tagSection.appendChild(tagWrap)
+          taskDetailBody.appendChild(tagSection)
+        }
+
+        const reportSection = document.createElement('div')
+        const reportLabel = document.createElement('p')
+        reportLabel.className = 'text-xs text-zinc-500 dark:text-zinc-400 mb-2'
+        reportLabel.textContent = `上报记录（${(task.reports || []).length}）`
+        reportSection.appendChild(reportLabel)
+        const reports = task.reports || []
+        if (reports.length === 0) {
+          const empty = document.createElement('p')
+          empty.className = 'text-sm text-zinc-400 dark:text-zinc-500 py-2'
+          empty.textContent = '暂无上报记录'
+          reportSection.appendChild(empty)
+        } else {
+          reports.slice().reverse().forEach((r) => {
+            const item = document.createElement('div')
+            item.className = 'rounded-2xl border border-zinc-100 dark:border-zinc-800 p-3 bg-zinc-50 dark:bg-zinc-800/50 mb-2'
+            const meta = document.createElement('div')
+            meta.className = 'flex items-center gap-2 mb-2'
+            const av = document.createElement('div')
+            av.className = 'w-6 h-6 rounded-full overflow-hidden bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center shrink-0'
+            if (r.avatar_url) {
+              const img = document.createElement('img')
+              img.src = r.avatar_url
+              img.alt = r.nickname || '用户'
+              img.className = 'w-full h-full object-cover'
+              av.appendChild(img)
+            } else {
+              av.innerHTML = '<svg class="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4" /><path d="M4 21v-1a6 6 0 016-6h4a6 6 0 016 6v1" /></svg>'
+            }
+            const nameEl = document.createElement('span')
+            nameEl.className = 'text-xs font-medium text-zinc-700 dark:text-zinc-300 truncate'
+            nameEl.textContent = r.nickname || '未知用户'
+            const timeEl = document.createElement('span')
+            timeEl.className = 'text-xs text-zinc-400 dark:text-zinc-500 ml-auto shrink-0'
+            timeEl.textContent = new Date(r.time).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+            meta.appendChild(av); meta.appendChild(nameEl); meta.appendChild(timeEl)
+            item.appendChild(meta)
+            if (r.note) {
+              const note = document.createElement('p')
+              note.className = 'text-sm text-zinc-900 dark:text-zinc-100 whitespace-pre-wrap break-words mb-2'
+              note.textContent = r.note
+              item.appendChild(note)
+            }
+            if (r.images?.length > 0) {
+              const grid = document.createElement('div')
+              grid.className = 'grid grid-cols-3 gap-2'
+              r.images.forEach((src) => {
+                const img = document.createElement('img')
+                img.src = src
+                img.alt = '上报图片'
+                img.className = 'w-full aspect-square object-cover rounded-lg border border-zinc-100 dark:border-zinc-800 cursor-pointer hover:opacity-90 transition-opacity'
+                img.addEventListener('click', () => {
+                  openPreview({ name: '上报图片', url: src, category: '图片', size: 0, type: 'image/jpeg' })
+                })
+                grid.appendChild(img)
+              })
+              item.appendChild(grid)
+            }
+            reportSection.appendChild(item)
+          })
+        }
+        taskDetailBody.appendChild(reportSection)
+
+                document.getElementById('task-detail-modal').classList.remove('hidden')
+        syncBodyScroll()
+      }
+      function closeTaskDetail() {
+                document.getElementById('task-detail-modal').classList.add('hidden')
+        currentDetailTaskId = null
+        syncBodyScroll()
+      }
+
+            document.getElementById('task-detail-close').addEventListener('click', closeTaskDetail)
+      document.getElementById('task-detail-backdrop').addEventListener('click', closeTaskDetail)
 
       taskSearch.addEventListener('input', () => { keyword = taskSearch.value.trim(); renderTasks() })
 
@@ -1990,13 +2201,34 @@
       taskTagAdd.addEventListener('click', addDraftTag)
       taskTagInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addDraftTag() } })
 
-      function openTaskModal() {
+            function openTaskModal(taskId) {
         if (!currentUser) { openUserModal(); return }
-        taskTitleInput.value = ''; taskTagInput.value = ''
-        draftTags = []; renderDraftTags()
+        if (taskId) {
+          const t = tasks.find((x) => x.id === taskId)
+          if (!t) return
+          currentEditingTaskId = taskId
+          taskModalTitle.textContent = '编辑任务'
+          taskTitleInput.value = t.title || ''
+          taskDescInput.value = t.description || ''
+          draftTags = (t.tags || []).slice()
+          renderDraftTags()
+          taskSubmit.textContent = '保存修改'
+        } else {
+          currentEditingTaskId = null
+          taskModalTitle.textContent = '添加任务'
+          taskTitleInput.value = ''
+          taskDescInput.value = ''
+          draftTags = []
+          renderDraftTags()
+          taskSubmit.textContent = '创建任务'
+        }
         taskModalEl.classList.remove('hidden'); syncBodyScroll(); taskTitleInput.focus()
       }
-      function closeTaskModal() { taskModalEl.classList.add('hidden'); syncBodyScroll() }
+      function closeTaskModal() {
+        taskModalEl.classList.add('hidden')
+        currentEditingTaskId = null
+        syncBodyScroll()
+      }
 
       taskAddOpen.addEventListener('click', openTaskModal)
       taskClose.addEventListener('click', closeTaskModal)
@@ -2004,18 +2236,40 @@
       dashAddTask.addEventListener('click', openTaskModal)
       dashNewTask.addEventListener('click', openTaskModal)
 
-      taskSubmit.addEventListener('click', async () => {
+            taskSubmit.addEventListener('click', async () => {
         const title = taskTitleInput.value.trim()
+        const description = taskDescInput.value.trim()
         if (!title) { taskTitleInput.focus(); return }
         taskSubmit.disabled = true
-        const { data, error } = await supabase.from('tasks').insert({ title, tags: draftTags.slice(), done: false, reports: [] }).select().single()
-        taskSubmit.disabled = false
-        if (error) return
-        tasks.unshift({ ...data, tags: data.tags || [], reports: data.reports || [] })
-        renderTasks(); closeTaskModal()
+        if (currentEditingTaskId) {
+          const { data, error } = await supabase
+            .from('tasks')
+            .update({ title, description: description || null, tags: draftTags.slice() })
+            .eq('id', currentEditingTaskId)
+            .select()
+            .single()
+          taskSubmit.disabled = false
+          if (error) { alert('保存失败：' + error.message); return }
+          const i = tasks.findIndex((t) => t.id === currentEditingTaskId)
+          if (i >= 0) tasks[i] = { ...data, tags: data.tags || [], reports: data.reports || [] }
+          renderTasks(); closeTaskModal()
+        } else {
+          const { data, error } = await supabase
+            .from('tasks')
+            .insert({ title, description: description || null, tags: draftTags.slice(), done: false, reports: [] })
+            .select()
+            .single()
+          taskSubmit.disabled = false
+          if (error) { alert('创建失败：' + error.message); return }
+          tasks.unshift({ ...data, tags: data.tags || [], reports: data.reports || [] })
+          renderTasks(); closeTaskModal()
+        }
       })
       taskTitleInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); taskSubmit.click() } })
 
+      
+      const taskDetailSubtitle = document.getElementById('task-detail-subtitle')
+      const taskDetailBody = document.getElementById('task-detail-body')
       const reportClose = document.getElementById('report-close')
       const reportBackdrop = document.getElementById('report-backdrop')
       const reportTaskTitle = document.getElementById('report-task-title')
@@ -2025,8 +2279,10 @@
       const reportPreview = document.getElementById('report-preview')
       const reportDone = document.getElementById('report-done')
       const reportSubmit = document.getElementById('report-submit')
-      let currentTaskId = null
+            let currentTaskId = null
       let pendingImages = []
+      let currentEditingTaskId = null
+      let currentDetailTaskId = null
 
       function compressImage(file) {
         return new Promise((res) => {
@@ -2158,8 +2414,18 @@
             urls.push(u.publicUrl)
           }
         }
+        
         const reports = task.reports || []
-        reports.push({ id: 'r' + Date.now(), note, images: urls, time: Date.now() })
+        const me = currentUser || {}
+        reports.push({
+          id: 'r' + Date.now(),
+          note,
+          images: urls,
+          time: Date.now(),
+          user_id: me.id || null,
+          avatar_url: me.user_metadata?.avatar_url || null,
+          nickname: (me.user_metadata?.nickname || me.user_metadata?.user_name || me.user_metadata?.name || (me.email ? me.email.split('@')[0] : '用户')),
+        })
         const patch = { reports }
         if (reportDone.checked) patch.done = true
         const { data, error } = await supabase.from('tasks').update(patch).eq('id', task.id).select().single()
@@ -3363,6 +3629,7 @@
         else if (!friendsModal.classList.contains('hidden')) closeFriendsModal()
         else if (!fileModal.classList.contains('hidden')) closeFileModal()
         else if (!reportModal.classList.contains('hidden')) closeReport()
+                        else if (document.getElementById('task-detail-modal') && !document.getElementById('task-detail-modal').classList.contains('hidden')) closeTaskDetail()
         else if (!taskModal.classList.contains('hidden')) closeTaskModal()
         else if (!projectModal.classList.contains('hidden')) closeProjectModal()
         else if (!calendarModal.classList.contains('hidden')) closeCalendar()
