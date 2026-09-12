@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>三人协作</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github-dark.min.css" />
-    <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js"></script>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     <script>
       tailwind.config = {
         darkMode: 'class',
@@ -3048,8 +3048,13 @@
         pre.appendChild(codeEl)
         wrap.appendChild(pre)
 
-        if (window.hljs) {
-          try { window.hljs.highlightElement(codeEl) } catch (_) {}
+        
+                try {
+          if (window.hljs && typeof window.hljs.highlightElement === 'function') {
+            window.hljs.highlightElement(codeEl)
+          }
+        } catch (e) {
+          console.warn('highlight failed', e)
         }
 
         return wrap
@@ -3306,10 +3311,15 @@
         } catch (err) {
           full = `请求失败：${stringifyErr(err)}`
         }
-        typewriterReveal(bubble, full, () => {
+          if (full.indexOf('```') !== -1) {
           renderAiMessageContent(bubble, full)
           aiMessages.scrollTop = aiMessages.scrollHeight
-        })
+        } else {
+        typewriterReveal(bubble, full, () => {
+            renderAiMessageContent(bubble, full)
+            aiMessages.scrollTop = aiMessages.scrollHeight
+          })
+        }
         aiHistory.push({ role: 'assistant', content: full })
         aiSending = false
         aiSend.disabled = false
