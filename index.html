@@ -558,7 +558,7 @@
                 <path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
               </svg>
             </div>
-            <h2 class="font-semibold text-zinc-900 dark:text-zinc-100 text-lg md:text-xl">新建项目</h2>
+            <h2 id="project-modal-title" class="font-semibold text-zinc-900 dark:text-zinc-100 text-lg md:text-xl">新建项目</h2>
           </div>
           <button id="project-close" type="button" class="p-2 rounded-xl text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-95 transition-all duration-200">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" /></svg>
@@ -1163,8 +1163,9 @@
       let files = []
       let projects = []
       let friends = []
-      let activeProjectId = null
+            let activeProjectId = null
       let draftInvitees = []
+      let editingProjectId = null
       let keyword = ''
       let draftTags = []
 
@@ -1941,8 +1942,9 @@
       const projectList = document.getElementById('project-list')
       const projectDetail = document.getElementById('project-detail')
       const projectSubtitle = document.getElementById('project-subtitle')
-      const projectNameInput = document.getElementById('project-name-input')
+            const projectNameInput = document.getElementById('project-name-input')
       const projectFieldInput = document.getElementById('project-field-input')
+      const projectModalTitle = document.getElementById('project-modal-title')
       const projectInviteInput = document.getElementById('project-invite-input')
       const projectInviteAdd = document.getElementById('project-invite-add')
       const projectInviteList = document.getElementById('project-invite-list')
@@ -2038,6 +2040,16 @@
         fieldLine.textContent = `研究方向：${proj.research_field || '未填写'}`
         info.appendChild(title); info.appendChild(fieldLine)
 
+                const headActions = document.createElement('div')
+        headActions.className = 'flex items-center gap-2 shrink-0'
+
+        const editBtn = document.createElement('button')
+        editBtn.type = 'button'
+        editBtn.setAttribute('aria-label', '编辑项目')
+        editBtn.className = 'shrink-0 p-2 rounded-xl text-zinc-400 dark:text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-blue-500 active:scale-95 transition-all duration-200'
+        editBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4z" /></svg>'
+        editBtn.addEventListener('click', () => openProjectEdit(proj))
+
         const delBtn = document.createElement('button')
         delBtn.type = 'button'
         delBtn.setAttribute('aria-label', '删除项目')
@@ -2055,7 +2067,8 @@
           if (activeProjectId === proj.id) activeProjectId = projects[0]?.id || null
           renderProjects()
         })
-        head.appendChild(info); head.appendChild(delBtn)
+        headActions.appendChild(editBtn); headActions.appendChild(delBtn)
+        head.appendChild(info); head.appendChild(headActions)
         projectDetail.appendChild(head)
 
         const stats = document.createElement('div')
@@ -2174,8 +2187,10 @@
       projectInviteAdd.addEventListener('click', addDraftInvitee)
       projectInviteInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addDraftInvitee() } })
 
-      function openProjectModal() {
+            function openProjectModal() {
         if (!currentUser) { openUserModal(); return }
+        editingProjectId = null
+        projectModalTitle.textContent = '新建项目'
         projectNameInput.value = ''
         projectFieldInput.value = ''
         projectInviteInput.value = ''
@@ -2191,8 +2206,28 @@
         syncBodyScroll()
         projectNameInput.focus()
       }
+      function openProjectEdit(proj) {
+        if (!proj) return
+        editingProjectId = proj.id
+        projectModalTitle.textContent = '编辑项目'
+        projectNameInput.value = proj.name || ''
+        projectFieldInput.value = proj.research_field || ''
+        projectInviteInput.value = ''
+        draftInvitees = (proj.invitees || []).slice()
+        renderDraftInvitees()
+        renderProjectFriendSelect()
+        projectCreatedPreview.textContent = fmtDateTime(proj.created_at || Date.now())
+        projectMessage.textContent = ''
+        projectMessage.className = 'hidden text-sm mb-4'
+        projectSubmit.disabled = false
+        projectSubmit.textContent = '保存修改'
+        projectModal.classList.remove('hidden')
+        syncBodyScroll()
+        projectNameInput.focus()
+      }
       function closeProjectModal() {
         projectModal.classList.add('hidden')
+        editingProjectId = null
         syncBodyScroll()
       }
 
@@ -2200,12 +2235,37 @@
       projectClose.addEventListener('click', closeProjectModal)
       projectBackdrop.addEventListener('click', closeProjectModal)
 
-      projectSubmit.addEventListener('click', async () => {
+            projectSubmit.addEventListener('click', async () => {
         const name = projectNameInput.value.trim()
         if (!name) { projectNameInput.focus(); return }
         const researchField = projectFieldInput.value.trim()
+        const isEdit = Boolean(editingProjectId)
         projectSubmit.disabled = true
-        projectSubmit.textContent = '创建中...'
+        projectSubmit.textContent = isEdit ? '保存中...' : '创建中...'
+        if (isEdit) {
+          const { data, error } = await supabase
+            .from('projects')
+            .update({
+              name,
+              research_field: researchField || null,
+              invitees: draftInvitees.slice(),
+            })
+            .eq('id', editingProjectId)
+            .select()
+            .single()
+          projectSubmit.disabled = false
+          projectSubmit.textContent = '保存修改'
+          if (error) {
+            projectMessage.textContent = `保存失败：${error.message}`
+            projectMessage.className = 'text-sm mb-4 text-red-500'
+            return
+          }
+          const idx = projects.findIndex((x) => x.id === editingProjectId)
+          if (idx >= 0) projects[idx] = { ...data, invitees: data.invitees || [] }
+          renderProjects()
+          closeProjectModal()
+          return
+        }
         const { data, error } = await supabase
           .from('projects')
           .insert({
