@@ -943,7 +943,28 @@
             </button>
           </div>
         </div>
-        <div id="preview-body" class="flex-1 overflow-auto bg-zinc-50 dark:bg-zinc-950 flex items-center justify-center p-4 min-h-[300px]"></div>
+                <div id="preview-body" class="flex-1 overflow-auto bg-zinc-50 dark:bg-zinc-950 flex items-center justify-center p-4 min-h-[300px]"></div>
+      </div>
+    </div>
+
+    <div id="confirm-modal" class="hidden fixed inset-0 z-[110] flex items-center justify-center p-4" role="dialog" aria-modal="true">
+      <div id="confirm-backdrop" class="absolute inset-0 bg-black/40"></div>
+      <div class="relative w-full max-w-sm rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 shadow-lg p-6">
+        <div class="flex items-start gap-4">
+          <div class="p-3 rounded-xl bg-red-50 dark:bg-red-900/20 shrink-0">
+            <svg class="w-6 h-6 text-red-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+            </svg>
+          </div>
+          <div class="min-w-0 flex-1">
+            <h2 id="confirm-title" class="font-semibold text-zinc-900 dark:text-zinc-100 text-lg">确认操作</h2>
+            <p id="confirm-message" class="text-sm text-zinc-500 dark:text-zinc-400 mt-2 break-words"></p>
+          </div>
+        </div>
+        <div class="flex items-center justify-end gap-3 mt-6">
+          <button id="confirm-cancel" type="button" class="px-4 py-2 rounded-xl font-medium text-sm bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 active:scale-95 transition-all duration-200">取消</button>
+          <button id="confirm-ok" type="button" class="px-4 py-2 rounded-xl font-medium text-sm bg-red-500 text-white hover:bg-red-600 active:scale-95 transition-all duration-200">确定</button>
+        </div>
       </div>
     </div>
 
@@ -1037,9 +1058,10 @@
       const friendsModal = document.getElementById('friends-modal')
 
       function syncBodyScroll() {
-        const cropModalEl = document.getElementById('crop-modal')
+                const cropModalEl = document.getElementById('crop-modal')
         const previewModalEl = document.getElementById('preview-modal')
                 const taskDetailModalEl = document.getElementById('task-detail-modal')
+        const confirmModalEl = document.getElementById('confirm-modal')
         const anyModalOpen =
           !calendarModal.classList.contains('hidden') ||
           !taskModal.classList.contains('hidden') ||
@@ -1050,12 +1072,13 @@
           !friendsModal.classList.contains('hidden') ||
           (taskDetailModalEl && !taskDetailModalEl.classList.contains('hidden')) ||
           (cropModalEl && !cropModalEl.classList.contains('hidden')) ||
+          (confirmModalEl && !confirmModalEl.classList.contains('hidden')) ||
           (previewModalEl && !previewModalEl.classList.contains('hidden'))
         const mobileSidebarOpen = sidebar.getAttribute('data-mobile-open') === 'true'
         document.body.style.overflow = (anyModalOpen || mobileSidebarOpen) ? 'hidden' : ''
       }
 
-      function openMobileSidebar() {
+                        function openMobileSidebar() {
         sidebar.setAttribute('data-mobile-open', 'true')
         sidebarOverlay.classList.remove('hidden')
         syncBodyScroll()
@@ -1065,11 +1088,39 @@
         sidebarOverlay.classList.add('hidden')
         syncBodyScroll()
       }
-      mobileMenuBtn.addEventListener('click', openMobileSidebar)
+            mobileMenuBtn.addEventListener('click', openMobileSidebar)
       sidebarOverlay.addEventListener('click', closeMobileSidebar)
       window.addEventListener('resize', () => {
         if (window.innerWidth >= 768 && sidebar.getAttribute('data-mobile-open') === 'true') closeMobileSidebar()
       })
+
+      const confirmModal = document.getElementById('confirm-modal')
+      const confirmBackdrop = document.getElementById('confirm-backdrop')
+      const confirmTitle = document.getElementById('confirm-title')
+      const confirmMessage = document.getElementById('confirm-message')
+      const confirmOk = document.getElementById('confirm-ok')
+      const confirmCancel = document.getElementById('confirm-cancel')
+      let confirmResolver = null
+
+      function closeConfirm(result) {
+        confirmModal.classList.add('hidden')
+        syncBodyScroll()
+        const resolve = confirmResolver
+        confirmResolver = null
+        if (resolve) resolve(result)
+      }
+      function confirmDialog({ title = '确认操作', message = '', okText = '确定', cancelText = '取消' } = {}) {
+        confirmTitle.textContent = title
+        confirmMessage.textContent = message
+        confirmOk.textContent = okText
+        confirmCancel.textContent = cancelText
+        confirmModal.classList.remove('hidden')
+        syncBodyScroll()
+        return new Promise((resolve) => { confirmResolver = resolve })
+      }
+      confirmOk.addEventListener('click', () => closeConfirm(true))
+      confirmCancel.addEventListener('click', () => closeConfirm(false))
+      confirmBackdrop.addEventListener('click', () => closeConfirm(false))
 
       toggle.addEventListener('click', () => {
         const collapsed = sidebar.getAttribute('data-collapsed') === 'true'
@@ -1323,6 +1374,12 @@
           del.className = 'shrink-0 p-2 rounded-xl text-zinc-400 dark:text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-red-500 active:scale-95 transition-all duration-200'
           del.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" /></svg>'
           del.addEventListener('click', async () => {
+            const ok = await confirmDialog({
+              title: '删除日程',
+              message: `确定要删除日程「${item.title || '未命名'}」吗？此操作不可恢复。`,
+              okText: '删除',
+            })
+            if (!ok) return
             await supabase.from('schedules').delete().eq('id', item.id)
             await loadSchedules(); renderCalendar(); renderSchedules()
           })
@@ -1421,9 +1478,11 @@
           return w(a) - w(b)
         })
                 sorted.forEach((f) => {
-          const li = document.createElement('li')
-          li.className = 'flex items-center gap-3 p-3 rounded-xl border border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50 cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-[0.99] transition-all duration-200'
-          li.addEventListener('click', () => openFriendHome(f))
+                  const li = document.createElement('li')
+                  li.className = 'flex items-center gap-3 p-3 rounded-xl border border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50 cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-[0.99] transition-all duration-200'
+                  li.dataset.friendId = f.id
+                  li.setAttribute('role', 'button')
+                  li.setAttribute('tabindex', '0')
 
           const avatar = document.createElement('div')
           avatar.className = 'w-10 h-10 rounded-full overflow-hidden bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center shrink-0'
@@ -1521,17 +1580,34 @@
         renderFriends()
         renderProjectFriendSelect()
       }
-      async function rejectFriend(f) {
+            async function rejectFriend(f) {
+        const isCancel = f.status === 'pending' && f.direction === 'out'
+        const isReject = f.status === 'pending' && f.direction === 'in'
+        const name = getFriendDisplayName(f)
+        const title = isCancel ? '取消好友请求' : '拒绝好友请求'
+        const message = isCancel
+          ? `确定要取消向「${name}」发送的好友请求吗？`
+          : `确定要拒绝「${name}」的好友请求吗？`
+        const ok = await confirmDialog({ title, message, okText: isCancel ? '取消请求' : '拒绝' })
+        if (!ok) return false
         await supabase.from('friends').delete().eq('id', f.recordId)
         await loadFriends()
         renderFriends()
         renderProjectFriendSelect()
+        return true
       }
       async function removeFriend(f) {
+        const ok = await confirmDialog({
+          title: '删除好友',
+          message: `确定要删除好友「${getFriendDisplayName(f)}」吗？此操作不可恢复。`,
+          okText: '删除',
+        })
+        if (!ok) return false
         await supabase.from('friends').delete().eq('id', f.recordId)
         await loadFriends()
         renderFriends()
         renderProjectFriendSelect()
+        return true
       }
 
       let activeFriendHomeId = null
@@ -1767,27 +1843,27 @@
           const removeBtn = document.createElement('button')
           removeBtn.type = 'button'
           removeBtn.className = 'px-4 py-2 rounded-xl font-medium text-sm bg-zinc-100 dark:bg-zinc-800 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 active:scale-95 transition-all duration-200'
-          removeBtn.textContent = '删除好友'
-          removeBtn.addEventListener('click', async () => { await removeFriend(f); closeFriendHome() })
+                    removeBtn.textContent = '删除好友'
+          removeBtn.addEventListener('click', async () => { const done = await removeFriend(f); if (done) closeFriendHome() })
           actions.appendChild(removeBtn)
         } else if (f.status === 'pending' && f.direction === 'in') {
           const acceptBtn = document.createElement('button')
           acceptBtn.type = 'button'
           acceptBtn.className = 'px-4 py-2 rounded-xl font-medium text-sm bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 active:scale-95 transition-all duration-200'
-          acceptBtn.textContent = '接受'
+                    acceptBtn.textContent = '接受'
           acceptBtn.addEventListener('click', async () => { await acceptFriend(f); refreshFriendHome(f.id) })
           const rejectBtn = document.createElement('button')
           rejectBtn.type = 'button'
           rejectBtn.className = 'px-4 py-2 rounded-xl font-medium text-sm bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 active:scale-95 transition-all duration-200'
           rejectBtn.textContent = '拒绝'
-          rejectBtn.addEventListener('click', async () => { await rejectFriend(f); closeFriendHome() })
+          rejectBtn.addEventListener('click', async () => { const done = await rejectFriend(f); if (done) closeFriendHome() })
           actions.appendChild(acceptBtn); actions.appendChild(rejectBtn)
         } else if (f.status === 'pending' && f.direction === 'out') {
           const cancelBtn = document.createElement('button')
           cancelBtn.type = 'button'
           cancelBtn.className = 'px-4 py-2 rounded-xl font-medium text-sm bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 active:scale-95 transition-all duration-200'
-          cancelBtn.textContent = '取消请求'
-          cancelBtn.addEventListener('click', async () => { await rejectFriend(f); closeFriendHome() })
+                    cancelBtn.textContent = '取消请求'
+          cancelBtn.addEventListener('click', async () => { const done = await rejectFriend(f); if (done) closeFriendHome() })
           actions.appendChild(cancelBtn)
         }
         friendsHomeBody.appendChild(actions)
@@ -1836,10 +1912,24 @@
       }
 
             friendsOpen.addEventListener('click', openFriendsModal)
-      friendsClose.addEventListener('click', closeFriendsModal)
-      friendsBackdrop.addEventListener('click', closeFriendsModal)
-      friendsHomeBack.addEventListener('click', closeFriendHome)
-      friendsHomeClose.addEventListener('click', closeFriendsModal)
+            friendsClose.addEventListener('click', closeFriendsModal)
+            friendsBackdrop.addEventListener('click', closeFriendsModal)
+            friendsHomeBack.addEventListener('click', closeFriendHome)
+            friendsHomeClose.addEventListener('click', closeFriendsModal)
+            friendsList.addEventListener('click', (e) => {
+              const row = e.target.closest('[data-friend-id]')
+              if (!row || !friendsList.contains(row)) return
+              const f = friends.find((x) => x.id === row.dataset.friendId)
+              if (f) openFriendHome(f)
+            })
+            friendsList.addEventListener('keydown', (e) => {
+              if (e.key !== 'Enter' && e.key !== ' ') return
+              const row = e.target.closest('[data-friend-id]')
+              if (!row || !friendsList.contains(row)) return
+              e.preventDefault()
+              const f = friends.find((x) => x.id === row.dataset.friendId)
+              if (f) openFriendHome(f)
+            })
       friendsAdd.addEventListener('click', () => addFriendById(friendsIdInput.value))
       friendsIdInput.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') { e.preventDefault(); addFriendById(friendsIdInput.value) }
@@ -1953,7 +2043,13 @@
         delBtn.setAttribute('aria-label', '删除项目')
         delBtn.className = 'shrink-0 p-2 rounded-xl text-zinc-400 dark:text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-red-500 active:scale-95 transition-all duration-200'
         delBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M6 6l1 14a2 2 0 002 2h6a2 2 0 002-2l1-14" /></svg>'
-        delBtn.addEventListener('click', async () => {
+                delBtn.addEventListener('click', async () => {
+          const ok = await confirmDialog({
+            title: '删除项目',
+            message: `确定要删除项目「${proj.name || '未命名'}」吗？此操作不可恢复。`,
+            okText: '删除',
+          })
+          if (!ok) return
           await supabase.from('projects').delete().eq('id', proj.id)
           projects = projects.filter((x) => x.id !== proj.id)
           if (activeProjectId === proj.id) activeProjectId = projects[0]?.id || null
@@ -2356,7 +2452,13 @@
           dBtn.setAttribute('aria-label', '删除任务')
           dBtn.className = 'p-2 rounded-xl text-zinc-400 dark:text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-red-500 active:scale-95 transition-all duration-200'
           dBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M6 6l1 14a2 2 0 002 2h6a2 2 0 002-2l1-14" /></svg>'
-          dBtn.addEventListener('click', async () => {
+                    dBtn.addEventListener('click', async () => {
+            const ok = await confirmDialog({
+              title: '删除任务',
+              message: `确定要删除任务「${task.title || '未命名'}」吗？此操作不可恢复。`,
+              okText: '删除',
+            })
+            if (!ok) return
             await supabase.from('tasks').delete().eq('id', task.id)
             tasks = tasks.filter((t) => t.id !== task.id)
             renderTasks()
@@ -2875,7 +2977,13 @@
             delBtn.setAttribute('aria-label', '删除文件')
             delBtn.className = 'p-2 rounded-xl text-zinc-400 dark:text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-red-500 active:scale-95 transition-all duration-200'
             delBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M6 6l1 14a2 2 0 002 2h6a2 2 0 002-2l1-14" /></svg>'
-            delBtn.addEventListener('click', async () => {
+                        delBtn.addEventListener('click', async () => {
+              const ok = await confirmDialog({
+                title: '删除文件',
+                message: `确定要删除文件「${file.name || '未命名'}」吗？此操作不可恢复。`,
+                okText: '删除',
+              })
+              if (!ok) return
               await supabase.storage.from('uploads').remove([file.path])
               await supabase.from('files').delete().eq('id', file.id)
               files = files.filter((f) => f.id !== file.id)
@@ -3930,11 +4038,12 @@
       })
       document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && aiPanelOpen) closeAiPanel() })
 
-      document.addEventListener('keydown', (e) => {
+            document.addEventListener('keydown', (e) => {
         if (e.key !== 'Escape') return
         const previewModalEl = document.getElementById('preview-modal')
         const cropModalEl = document.getElementById('crop-modal')
-        if (previewModalEl && !previewModalEl.classList.contains('hidden')) closePreview()
+        if (!confirmModal.classList.contains('hidden')) closeConfirm(false)
+        else if (previewModalEl && !previewModalEl.classList.contains('hidden')) closePreview()
         else if (cropModalEl && !cropModalEl.classList.contains('hidden')) closeCropModal()
         else if (!userModal.classList.contains('hidden')) closeUserModal()
         else if (!friendsModal.classList.contains('hidden')) {
