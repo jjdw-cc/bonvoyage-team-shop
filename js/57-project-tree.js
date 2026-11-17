@@ -133,9 +133,8 @@ function treeMount() {
   const addRoot = treeEl('button', btnBase + ' bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200')
   addRoot.type = 'button'
   addRoot.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>主根'
-  const addChild = treeEl('button', btnBase + ' bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-zinc-700 disabled:opacity-40')
+  const addChild = treeEl('button', btnBase + ' bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-zinc-700')
   addChild.type = 'button'
-  addChild.disabled = true
   addChild.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>分支'
   const zoomOut = treeEl('button', 'w-8 h-8 rounded-xl text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-95 transition-all', '−')
   zoomOut.type = 'button'
@@ -234,7 +233,11 @@ function treeMount() {
   })
   addChild.addEventListener('click', () => {
     const parent = treeNodeById(treeSelectedId)
-    if (parent) createTreeNode({ kind: 'node', parent })
+    if (!parent) {
+      treeEls.hint.textContent = '先点一下某个节点，再点「分支」'
+      return
+    }
+    createTreeNode({ kind: 'node', parent })
   })
   zoomOut.addEventListener('click', () => setTreeZoom(treeZoom - 0.1))
   zoomIn.addEventListener('click', () => setTreeZoom(treeZoom + 0.1))
@@ -277,6 +280,8 @@ async function openTree(proj) {
   treeEls.sub.textContent = proj.research_field || '每个窗口是一个节点，右侧是便签'
   treeEls.modal.classList.remove('hidden')
   document.body.style.overflow = 'hidden'
+  const cm = document.getElementById('confirm-modal')
+  if (cm) cm.style.zIndex = '150'
   treeSelectedId = null
   closeTreeMenu()
   hideNotePeek()
@@ -294,6 +299,8 @@ function closeTree() {
   closeNoteViewer()
   treeEls.modal.classList.add('hidden')
   document.body.style.overflow = ''
+  const cm = document.getElementById('confirm-modal')
+  if (cm) cm.style.zIndex = ''
   treeSelectedId = null
 }
 
@@ -465,7 +472,6 @@ function renderTree() {
   renderTreeNodes()
   renderTreeNotes()
   renderTreeEdges()
-  treeEls.addChild.disabled = !treeSelectedId
 }
 
 function treeHeaderTextColor(hex) {
@@ -625,6 +631,15 @@ function renderTreeNodes() {
 
     win.appendChild(bodyEl)
     wrap.appendChild(win)
+
+    // 添加子节点
+    const addChildBtn = treeEl('button', 'absolute -bottom-3 left-1/2 -translate-x-1/2 w-6 h-6 rounded-full bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-600 text-zinc-500 dark:text-zinc-300 text-[13px] leading-none shadow-sm opacity-0 group-hover:opacity-100 hover:text-blue-500 hover:border-blue-400 active:scale-95 transition-all')
+    addChildBtn.type = 'button'
+    addChildBtn.textContent = '+'
+    addChildBtn.title = '添加子节点'
+    addChildBtn.addEventListener('pointerdown', (e) => e.stopPropagation())
+    addChildBtn.addEventListener('click', (e) => { e.stopPropagation(); createTreeNode({ kind: 'node', parent: node }) })
+    wrap.appendChild(addChildBtn)
 
     // 连线手柄
     const handle = treeEl('button', 'absolute -right-7 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-white dark:bg-zinc-800 border-2 border-blue-500 text-blue-500 text-[11px] font-bold leading-none shadow-sm transition-opacity opacity-0 group-hover:opacity-100')
@@ -901,7 +916,6 @@ function onNodePointerDown(e, node) {
   closeTreeMenu()
   hideNotePeek()
   treeSelectedId = node.id
-  treeEls.addChild.disabled = false
 
   const startX = e.clientX
   const startY = e.clientY
