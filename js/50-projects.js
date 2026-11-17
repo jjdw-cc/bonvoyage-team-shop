@@ -122,6 +122,13 @@ function renderProjectDetail() {
     renderFiles()
     updateFileStats()
   })
+  const treeBtn = document.createElement('button')
+  treeBtn.type = 'button'
+  treeBtn.className = 'shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs md:text-sm font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-zinc-700 active:scale-95 transition-all duration-200'
+  treeBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2.5"/><circle cx="5" cy="19" r="2.5"/><circle cx="19" cy="19" r="2.5"/><path d="M12 7.5v4M12 11.5L6 16.5M12 11.5l6 5"/></svg>知识树'
+  treeBtn.addEventListener('click', () => openTree(proj))
+
+  headActions.appendChild(treeBtn)
   headActions.appendChild(editBtn); headActions.appendChild(delBtn)
   head.appendChild(info); head.appendChild(headActions)
   projectDetail.appendChild(head)

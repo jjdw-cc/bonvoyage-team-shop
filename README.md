@@ -12,6 +12,10 @@
 代码文件（.c / .py / .js / .md …）点开即可在站内查看，带语法高亮、行号和复制按钮。
 同一范围内上传**同名文件会自动替换**旧文件（旧记录和旧对象一起清理）。
 
+**知识树**：项目详情右上角进入，树状节点图画布。每个节点可以写自己的想法、传自己的文件
+（同名文件可共存，按人区分），文件通过后并入项目文件；主根可自选形状，同一项目可以有多个主根，
+不同主根下的节点也能互相连线。
+
 ## 目录
 
 ```
@@ -47,6 +51,10 @@ python -m http.server 8000
 结构改动放在 `supabase/migrations/`，需要在 Supabase Dashboard → SQL Editor 手动执行一次：
 
 - `20261117_project_files.sql` —— `files` 表增加 `project_id` / `uploaded_by`（项目文件功能依赖）
+- `20261118_project_tree.sql` —— 知识树四张表（`tree_nodes` / `tree_links` / `node_notes` / `node_files`）
+- `20261118_tree_node_style.sql` —— 节点宽度 / 高度 / 颜色
+- `20261118_tree_link_bend.sql` —— 跨树连线可拖弯（bend_x / bend_y）
+- `20261118_tree_edge_bend.sql` —— 父子连线可拖弯（link_bend_x / link_bend_y）
 
 ## 账号与登录
 
