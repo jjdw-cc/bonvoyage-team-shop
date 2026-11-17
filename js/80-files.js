@@ -180,10 +180,62 @@ fileInput.addEventListener('change', () => {
   fileSubmit.disabled = false
 })
 
+// ── 同名替换 ──────────────────────────────────────────────────────────
+// 作用域：同一个项目内（或同为「全局文件库」）同名文件互相替换，跨项目互不影响。
+// 顺序：先传新文件 → 插入新记录 → 再删旧记录和旧对象。
+// 这样万一上传失败，旧文件仍然完好。
+async function findSameNameFiles(name, projectId) {
+  let q = supabase.from('files').select('*').eq('name', name)
+  q = projectId ? q.eq('project_id', projectId) : q.is('project_id', null)
+  const { data, error } = await q
+  if (error) {
+    console.error('[upload] 查询同名文件失败', error.message)
+    return []
+  }
+  // 必须返回快照：之后 files 数组会被 unshift，避免两边指向同一个数组
+  return (data || []).slice()
+}
+
+function showToast(text) {
+  const el = document.createElement('div')
+  el.className = 'fixed left-1/2 -translate-x-1/2 bottom-24 z-[200] px-4 py-2 rounded-xl bg-zinc-900/90 dark:bg-white/90 text-white dark:text-zinc-900 text-sm shadow-lg pointer-events-none transition-opacity duration-300 opacity-0'
+  el.textContent = text
+  document.body.appendChild(el)
+  requestAnimationFrame(() => { el.style.opacity = '1' })
+  setTimeout(() => {
+    el.style.opacity = '0'
+    setTimeout(() => el.remove(), 300)
+  }, 2200)
+}
+
+async function replaceSameNameFiles(duplicates) {
+  if (!duplicates.length) return 0
+  const ids = duplicates.map((f) => f.id)
+  const paths = duplicates.map((f) => f.path).filter(Boolean)
+
+  // 先删数据库行：删失败就保留旧文件，避免出现「记录在、文件没了」
+  const { error: de } = await supabase.from('files').delete().in('id', ids)
+  if (de) {
+    console.error('[upload] 删除同名旧记录失败', de.message)
+    return 0
+  }
+  if (paths.length > 0) {
+    const { error: se } = await supabase.storage.from('uploads').remove(paths)
+    if (se) console.error('[upload] 删除同名旧对象失败（会占用配额，可忽略）', se.message)
+  }
+  const idSet = new Set(ids)
+  files = files.filter((f) => !idSet.has(f.id))
+  return ids.length
+}
+
 fileSubmit.addEventListener('click', async () => {
   if (!pendingFile) return
   const targetProject = pendingProjectId
   fileSubmit.disabled = true; fileSubmit.textContent = '上传中...'
+
+  // 上传前先记下同名文件（此时还没改动任何数据）
+  const duplicates = await findSameNameFiles(pendingFile.name, targetProject)
+
   const safeName = pendingFile.name.replace(/[^\w.\-\u4e00-\u9fa5]/g, '_')
   const path = `files/${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safeName}`
   const { data: ud, error: ue } = await supabase.storage.from('uploads').upload(path, pendingFile, { cacheControl: '3600', upsert: false, contentType: pendingFile.type || 'application/octet-stream' })
@@ -208,9 +260,14 @@ fileSubmit.addEventListener('click', async () => {
     fileMessage.className = 'text-sm mb-4 text-red-500'
     return
   }
-  files.unshift(row); renderFiles(); updateFileStats()
+
+  files.unshift(row)
+  const replaced = await replaceSameNameFiles(duplicates)
+
+  renderFiles(); updateFileStats()
   closeFileModal()
   if (targetProject) renderProjects()
+  if (replaced > 0) showToast(`已替换同名文件「${row.name}」`)
 })
 
 async function loadStorageUsage() {
