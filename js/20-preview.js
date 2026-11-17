@@ -199,6 +199,7 @@ async function openPreview(file) {
 }
 
 function closePreview() {
+  previewModal.style.zIndex = ''
   previewModal.classList.add('hidden')
   previewBody.innerHTML = ''
   previewBody.classList.add('items-center', 'justify-center')

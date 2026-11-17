@@ -55,6 +55,12 @@ python -m http.server 8000
 - `20261118_tree_node_style.sql` —— 节点宽度 / 高度 / 颜色
 - `20261118_tree_link_bend.sql` —— 跨树连线可拖弯（bend_x / bend_y）
 - `20261118_tree_edge_bend.sql` —— 父子连线可拖弯（link_bend_x / link_bend_y）
+- `20261118_note_color.sql` —— 便签纯色（color）
+- `20261119_node_file_votes.sql` —— 节点附件投票表
+- `20261120_note_canvas.sql` —— 便签在画布上的位置和尺寸
+- `20261121_free_notes.sql` —— 便签可脱离节点，改为按项目归属
+
+> 一次性建全：SQL Editor 里执行 `supabase/migrations/setup_all.sql` 即可。
 
 ## 账号与登录
 

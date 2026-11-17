@@ -1,32 +1,31 @@
 /* ─────────────────────────────────────────────────────────────
- * 57-project-tree.js · 项目知识树（记忆节点图）
+ * 57-project-tree.js · 项目知识树（节点 = 固定大小的小窗口）
  * · 右键空白处新建主根
- * · 节点右侧「+」拖到另一个节点即可连线
- * · 主根可换形状、调大小、换颜色
- * · 节点信息是贴在节点右侧的浮动弹窗，可收起成小圆点，不遮挡画布操作
+ * · 节点窗口：白底、彩色边框、顶部节点名，右侧堆叠便签
+ * · 便签悬停自动展开；可换色、==高亮==、插图
+ * · 节点右侧「+」拖到另一个节点即可连线；连线可拖弯
  * ───────────────────────────────────────────────────────────── */
 'use strict'
 
-const TREE_ROOT_W = 240
-const TREE_ROOT_H = 90
-const TREE_NODE_W = 196
-const TREE_NODE_H = 66
+const TREE_WIN_W = 320
+const TREE_WIN_H = 250
 
-const TREE_SHAPES = {
-  rect: { label: '圆角', cls: 'rounded-2xl', style: '' },
-  pill: { label: '胶囊', cls: 'rounded-full', style: '' },
-  hex: { label: '六边形', cls: '', style: 'clip-path:polygon(14% 0,86% 0,100% 50%,86% 100%,14% 100%,0 50%)' },
-  diamond: { label: '菱形', cls: '', style: 'clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%)' },
+const TREE_BORDER_COLORS = {
+  gray: { label: '灰', value: '#a1a1aa' },
+  sky: { label: '蓝', value: '#3b82f6' },
+  emerald: { label: '绿', value: '#10b981' },
+  amber: { label: '橙', value: '#f59e0b' },
+  rose: { label: '红', value: '#f43f5e' },
+  violet: { label: '紫', value: '#8b5cf6' },
 }
 
-const TREE_COLORS = {
-  plain: { label: '默认', cls: 'bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-100 border-zinc-200 dark:border-zinc-700', swatch: 'bg-white border border-zinc-300' },
-  indigo: { label: '蓝紫', cls: 'bg-gradient-to-br from-blue-500 to-purple-600 text-white border-transparent shadow-md', swatch: 'bg-gradient-to-br from-blue-500 to-purple-600' },
-  sky: { label: '天蓝', cls: 'bg-gradient-to-br from-sky-500 to-blue-600 text-white border-transparent shadow-md', swatch: 'bg-gradient-to-br from-sky-500 to-blue-600' },
-  emerald: { label: '翠绿', cls: 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white border-transparent shadow-md', swatch: 'bg-gradient-to-br from-emerald-500 to-teal-600' },
-  amber: { label: '橙黄', cls: 'bg-gradient-to-br from-amber-500 to-orange-600 text-white border-transparent shadow-md', swatch: 'bg-gradient-to-br from-amber-500 to-orange-600' },
-  rose: { label: '玫红', cls: 'bg-gradient-to-br from-rose-500 to-pink-600 text-white border-transparent shadow-md', swatch: 'bg-gradient-to-br from-rose-500 to-pink-600' },
-  slate: { label: '石墨', cls: 'bg-gradient-to-br from-zinc-600 to-zinc-900 text-white border-transparent shadow-md', swatch: 'bg-gradient-to-br from-zinc-600 to-zinc-900' },
+const NOTE_COLORS = {
+  yellow: { label: '黄', bg: '#FFE08A', edge: '#F2C94C', text: '#3D2F00' },
+  orange: { label: '橙', bg: '#FFB570', edge: '#F2994A', text: '#4A2500' },
+  pink: { label: '粉', bg: '#F49AC2', edge: '#EB7BB0', text: '#4A0F2A' },
+  blue: { label: '蓝', bg: '#A9D6E5', edge: '#7FBED1', text: '#123B47' },
+  green: { label: '绿', bg: '#B7E4C7', edge: '#8FD3A8', text: '#123D22' },
+  purple: { label: '紫', bg: '#D7C4F0', edge: '#BFA4E6', text: '#2E1A4A' },
 }
 
 let treeProjectId = null
@@ -35,19 +34,21 @@ let treeNodes = []
 let treeLinks = []
 let treeNotes = []
 let treeNodeFiles = []
+let treeVotes = []
 let treeProfiles = {}
 let treeSelectedId = null
-let treePopoverNodeId = null
-let treePopoverCollapsed = false
 let treeZoom = 1
 let treePan = { x: 0, y: 0 }
 let treeEls = null
 let treeMenuPoint = null
-let treeLinkDrag = null
+let treePeekTimer = null
+let treeEditingNote = null
+let treeNewNotePos = null
+let treeEditorNodeId = null
+let treeFilesNode = null
 
-const treeW = (n) => (n.width || (n.kind === 'root' ? TREE_ROOT_W : TREE_NODE_W))
-const treeH = (n) => (n.height || (n.kind === 'root' ? TREE_ROOT_H : TREE_NODE_H))
-const treeColor = (n) => TREE_COLORS[n.color] || (n.kind === 'root' ? TREE_COLORS.indigo : TREE_COLORS.plain)
+const treeW = () => TREE_WIN_W
+const treeH = () => TREE_WIN_H
 
 function treeEl(tag, cls, text) {
   const e = document.createElement(tag)
@@ -56,15 +57,57 @@ function treeEl(tag, cls, text) {
   return e
 }
 
+
+function treeIcon(name, size) {
+  const span = document.createElement('span')
+  span.style.display = 'inline-block'
+  span.style.width = (size || 16) + 'px'
+  span.style.height = (size || 16) + 'px'
+  span.style.flexShrink = '0'
+  const url = `url("./assets/icons/${name}.svg")`
+  span.style.webkitMaskImage = url
+  span.style.maskImage = url
+  span.style.webkitMaskRepeat = 'no-repeat'
+  span.style.maskRepeat = 'no-repeat'
+  span.style.webkitMaskPosition = 'center'
+  span.style.maskPosition = 'center'
+  span.style.webkitMaskSize = 'contain'
+  span.style.maskSize = 'contain'
+  span.style.backgroundColor = 'currentColor'
+  return span
+}
+
+function escapeHtml(s) {
+  return String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
+}
+
+function treeBorderColor(node) {
+  const c = TREE_BORDER_COLORS[node.color] || TREE_BORDER_COLORS.gray
+  return c.value
+}
+
+function treeViewCenter() {
+  const rect = treeEls.stage.getBoundingClientRect()
+  return { x: (rect.width / 2 - treePan.x) / treeZoom, y: (rect.height / 2 - treePan.y) / treeZoom }
+}
+
+function treeNodeById(id) {
+  return treeNodes.find((n) => n.id === id) || null
+}
+
+function treeNotesOf(nodeId) {
+  return treeNotes.filter((n) => n.node_id === nodeId)
+}
+
+function treeFilesOf(nodeId) {
+  return treeNodeFiles.filter((f) => f.node_id === nodeId)
+}
+
 function treeAuthorName(id) {
   if (!id) return '匿名'
   if (currentUser && id === currentUser.id) return '我'
   const p = treeProfiles[id]
   return (p && (p.nickname || p.name)) || '成员'
-}
-
-function treeNodeById(id) {
-  return treeNodes.find((n) => n.id === id) || null
 }
 
 // ── 外壳 ───────────────────────────────────────────────────────────────
@@ -87,16 +130,13 @@ function treeMount() {
 
   const tools = treeEl('div', 'ml-auto flex items-center gap-1.5 md:gap-2')
   const btnBase = 'inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs md:text-sm font-medium active:scale-95 transition-all'
-
   const addRoot = treeEl('button', btnBase + ' bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200')
   addRoot.type = 'button'
   addRoot.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>主根'
-
   const addChild = treeEl('button', btnBase + ' bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-zinc-700 disabled:opacity-40')
   addChild.type = 'button'
   addChild.disabled = true
   addChild.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>分支'
-
   const zoomOut = treeEl('button', 'w-8 h-8 rounded-xl text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-95 transition-all', '−')
   zoomOut.type = 'button'
   const zoomLabel = treeEl('span', 'text-xs text-zinc-500 dark:text-zinc-400 w-10 text-center', '100%')
@@ -117,7 +157,6 @@ function treeMount() {
   header.appendChild(tools)
 
   const body = treeEl('div', 'flex-1 flex min-h-0')
-
   const stage = treeEl('div', 'relative flex-1 overflow-hidden')
   stage.id = 'tree-stage'
   stage.style.backgroundImage = 'radial-gradient(circle, #d4d4d8 1px, transparent 1px)'
@@ -127,37 +166,71 @@ function treeMount() {
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
   svg.setAttribute('class', 'absolute inset-0 w-full h-full pointer-events-none')
   const edgeGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g')
-
   const tempGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g')
   const layer = treeEl('div', 'absolute inset-0 origin-top-left')
-
+  const peek = treeEl('div', 'hidden fixed z-[140]')
+  peek.addEventListener('pointerenter', () => {
+    if (treePeekTimer) { clearTimeout(treePeekTimer); treePeekTimer = null }
+  })
+  peek.addEventListener('pointerleave', () => scheduleHideNotePeek())
   const hint = treeEl('p', 'absolute bottom-3 left-3 right-3 text-[11px] text-zinc-400 dark:text-zinc-500 pointer-events-none truncate',
-    '右键新建主根 · 节点右侧 + 拖出连线 · 拖连线上的圆点可弯曲（双击复位） · 滚轮缩放')
+    '右键新建主根 · 节点右侧 + 拖出连线 · 便签悬停展开')
 
-  const popover = treeEl('div', 'hidden absolute z-30')
   const menu = treeEl('div', 'hidden absolute z-40 w-52 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-xl p-1')
 
   stage.appendChild(svg)
   svg.appendChild(edgeGroup)
   svg.appendChild(tempGroup)
   stage.appendChild(layer)
-  stage.appendChild(popover)
+  document.body.appendChild(peek)
   stage.appendChild(menu)
   stage.appendChild(hint)
+
+  const toolbar = treeEl('div', 'absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-2 py-2 rounded-2xl bg-white/95 dark:bg-zinc-800/95 shadow-xl border border-zinc-200/70 dark:border-zinc-700')
+  toolbar.id = 'tree-toolbar'
+
+  const primary = treeEl('button', 'inline-flex items-center gap-1.5 pl-2.5 pr-3.5 h-9 rounded-xl bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 hover:opacity-90 active:scale-95 transition-all text-[12.5px] font-medium')
+  primary.type = 'button'
+  primary.appendChild(treeIcon('sticky-note', 16))
+  primary.appendChild(treeEl('span', '', '便签'))
+
+  const iconBtn = (icon, title) => {
+    const b = treeEl('button', 'w-9 h-9 rounded-xl inline-flex items-center justify-center text-zinc-500 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 hover:text-zinc-900 dark:hover:text-white active:scale-95 transition-all')
+    b.type = 'button'
+    b.title = title
+    b.appendChild(treeIcon(icon, 18))
+    return b
+  }
+
+  const tbRoot = iconBtn('circle-plus', '新建主根')
+  const tbFit = iconBtn('maximize', '视图居中')
+  const sep = treeEl('div', 'w-px h-6 bg-zinc-200 dark:bg-zinc-700 mx-0.5')
+
+  toolbar.appendChild(primary)
+  toolbar.appendChild(tbRoot)
+  toolbar.appendChild(sep)
+  toolbar.appendChild(tbFit)
+  stage.appendChild(toolbar)
+
+  primary.addEventListener('click', (e) => { e.stopPropagation(); openTreeNoteEditor(null, null) })
+  tbRoot.addEventListener('click', (e) => {
+    e.stopPropagation()
+    const c = treeViewCenter()
+    createRootAt(c.x, c.y)
+  })
+  tbFit.addEventListener('click', (e) => { e.stopPropagation(); fitTreeView() })
 
   body.appendChild(stage)
   modal.appendChild(header)
   modal.appendChild(body)
   document.body.appendChild(modal)
 
-  treeEls = { modal, back, title, sub, addRoot, addChild, zoomOut, zoomIn, zoomLabel, fitBtn, stage, svg, edgeGroup, tempGroup, layer, popover, menu, hint }
+  treeEls = { modal, back, title, sub, addRoot, addChild, zoomOut, zoomIn, zoomLabel, fitBtn, stage, svg, edgeGroup, tempGroup, layer, peek, menu, hint, toolbar }
 
   back.addEventListener('click', closeTree)
   addRoot.addEventListener('click', () => {
     const rect = stage.getBoundingClientRect()
-    const x = (rect.width / 2 - treePan.x) / treeZoom
-    const y = (rect.height / 2 - treePan.y) / treeZoom
-    createRootAt(x, y)
+    createRootAt((rect.width / 2 - treePan.x) / treeZoom, (rect.height / 2 - treePan.y) / treeZoom)
   })
   addChild.addEventListener('click', () => {
     const parent = treeNodeById(treeSelectedId)
@@ -177,7 +250,7 @@ function treeMount() {
     if (!treeEls || treeEls.modal.classList.contains('hidden')) return
     if (!treeEls.menu.classList.contains('hidden') && !treeEls.menu.contains(e.target)) closeTreeMenu()
   })
-  window.addEventListener('resize', () => updateTreePopoverPosition())
+  window.addEventListener('resize', () => hideNotePeek())
   window.addEventListener('keydown', onTreeKeydown)
 
   return treeEls
@@ -185,11 +258,13 @@ function treeMount() {
 
 function onTreeKeydown(e) {
   if (!treeEls || treeEls.modal.classList.contains('hidden')) return
-  if (e.key === 'Escape') {
-    if (!treeEls.menu.classList.contains('hidden')) { closeTreeMenu(); return }
-    if (treePopoverCollapsed === false && treePopoverNodeId) { treePopoverCollapsed = true; openTreePopover(treePopoverNodeId); return }
-    closeTree()
-  }
+  if (e.key !== 'Escape') return
+  if (!treeEls.menu.classList.contains('hidden')) { closeTreeMenu(); return }
+  const noteEd = document.getElementById('tree-note-editor')
+  if (noteEd && !noteEd.classList.contains('hidden')) { closeTreeNoteEditor(); return }
+  const filesEd = document.getElementById('tree-files-modal')
+  if (filesEd && !filesEd.classList.contains('hidden')) { closeTreeFiles(); return }
+  closeTree()
 }
 
 // ── 打开 / 关闭 ────────────────────────────────────────────────────────
@@ -199,26 +274,27 @@ async function openTree(proj) {
   treeProjectId = proj.id
   treeProjectName = proj.name || '项目'
   treeEls.title.textContent = `${treeProjectName} · 知识树`
-  treeEls.sub.textContent = proj.research_field || '右键空白处新建主根'
+  treeEls.sub.textContent = proj.research_field || '每个窗口是一个节点，右侧是便签'
   treeEls.modal.classList.remove('hidden')
   document.body.style.overflow = 'hidden'
   treeSelectedId = null
-  treePopoverNodeId = null
-  treePopoverCollapsed = false
-  treeEls.popover.classList.add('hidden')
   closeTreeMenu()
+  hideNotePeek()
   await loadTree()
   fitTreeView()
 }
 
 function closeTree() {
   if (!treeEls) return
-  treeEls.modal.classList.add('hidden')
-  treeEls.popover.classList.add('hidden')
+  hideNotePeek()
   closeTreeMenu()
+  closeTreeNoteEditor()
+  closeTreeFiles()
+  closeTreePopover()
+  closeNoteViewer()
+  treeEls.modal.classList.add('hidden')
   document.body.style.overflow = ''
   treeSelectedId = null
-  treePopoverNodeId = null
 }
 
 // ── 数据 ───────────────────────────────────────────────────────────────
@@ -232,7 +308,7 @@ async function loadTree() {
   if (error) {
     console.error('[tree] 加载节点失败', error.message)
     treeNodes = []
-    treeEls.hint.textContent = '加载失败：' + error.message + '（请先执行 supabase/migrations/20261118_project_tree.sql）'
+    treeEls.hint.textContent = '加载失败：' + error.message + '（请先执行 supabase/migrations/setup_all.sql）'
   } else {
     treeNodes = nodes || []
   }
@@ -245,8 +321,64 @@ async function loadTree() {
     if (root) treeNodes.push(root)
   }
 
+  await loadAllNotes()
+  await loadAllNodeFiles()
+  await loadAllNodeVotes()
   await loadTreeProfiles()
   renderTree()
+}
+
+async function loadAllNotes() {
+  const { data } = await supabase.from('node_notes').select('*').eq('project_id', treeProjectId).order('created_at', { ascending: true })
+  treeNotes = data || []
+  treeNotes.forEach((n, i) => {
+    if (n.x == null || n.y == null) {
+      const node = n.node_id ? treeNodeById(n.node_id) : null
+      n.x = (node ? node.x : 0) + TREE_WIN_W / 2 + 28 + (i % 3) * 24
+      n.y = (node ? node.y : 0) - TREE_WIN_H / 2 - 10 + (i % 4) * 24
+    }
+    if (!n.width) n.width = 200
+    if (!n.height) n.height = 200
+  })
+}
+
+async function loadAllNodeFiles() {
+  const ids = treeNodes.map((n) => n.id)
+  if (ids.length === 0) { treeNodeFiles = []; return }
+  const { data } = await supabase.from('node_files').select('*').in('node_id', ids)
+  treeNodeFiles = data || []
+}
+
+async function loadAllNodeVotes() {
+  const ids = treeNodeFiles.map((f) => f.id)
+  if (ids.length === 0) { treeVotes = []; return }
+  const { data } = await supabase.from('node_file_votes').select('*').in('file_id', ids)
+  treeVotes = data || []
+}
+
+function treeVotesOf(fileId) {
+  return treeVotes.filter((v) => v.file_id === fileId)
+}
+
+function treeMyVote(fileId) {
+  if (!currentUser) return false
+  return treeVotes.some((v) => v.file_id === fileId && v.user_id === currentUser.id)
+}
+
+async function toggleTreeVote(file) {
+  if (!currentUser) return
+  const mine = treeVotes.find((v) => v.file_id === file.id && v.user_id === currentUser.id)
+  if (mine) {
+    await supabase.from('node_file_votes').delete().eq('id', mine.id)
+    treeVotes = treeVotes.filter((v) => v.id !== mine.id)
+  } else {
+    const { data, error } = await supabase.from('node_file_votes').insert({ file_id: file.id, user_id: currentUser.id }).select().single()
+    if (error) { treeEls.hint.textContent = '投票失败：' + error.message; return }
+    if (data) treeVotes.push(data)
+  }
+  renderTreeNodes()
+  const fm = document.getElementById('tree-files-modal')
+  if (fm && !fm.classList.contains('hidden')) await renderTreeFiles()
 }
 
 async function loadTreeProfiles() {
@@ -268,9 +400,9 @@ async function insertTreeNode({ kind, title, parent, x, y }) {
     parent_id: parent ? parent.id : null,
     title: title || (kind === 'root' ? '新主根' : '新分支'),
     shape: 'rect',
-    color: kind === 'root' ? 'indigo' : 'plain',
-    width: kind === 'root' ? TREE_ROOT_W : TREE_NODE_W,
-    height: kind === 'root' ? TREE_ROOT_H : TREE_NODE_H,
+    color: kind === 'root' ? 'sky' : 'gray',
+    width: TREE_WIN_W,
+    height: TREE_WIN_H,
     x: x == null ? 0 : x,
     y: y == null ? 0 : y,
     kind,
@@ -291,8 +423,7 @@ async function createRootAt(x, y) {
   if (!node) return
   treeNodes.push(node)
   renderTree()
-  selectTreeNode(node.id)
-  treeEls.hint.textContent = '已创建主根，可以拖动、调大小、换形状和颜色'
+  treeEls.hint.textContent = '已创建主根：双击标题可改名'
 }
 
 async function createTreeNode({ kind, parent }) {
@@ -300,21 +431,20 @@ async function createTreeNode({ kind, parent }) {
   let y = 0
   if (kind === 'root') {
     const roots = treeNodes.filter((n) => n.kind === 'root')
-    x = roots.length === 0 ? 0 : Math.max.apply(null, roots.map((r) => r.x)) + 340
+    x = roots.length === 0 ? 0 : Math.max.apply(null, roots.map((r) => r.x)) + 380
     y = 0
   } else if (parent) {
     const siblings = treeNodes.filter((n) => n.parent_id === parent.id)
     const n = siblings.length
-    const offset = n === 0 ? 0 : (n % 2 === 1 ? 1 : -1) * Math.ceil(n / 2) * 240
+    const offset = n === 0 ? 0 : (n % 2 === 1 ? 1 : -1) * Math.ceil(n / 2) * 340
     x = parent.x + offset
-    y = parent.y + 170
+    y = parent.y + 270
   }
 
   const node = await insertTreeNode({ kind, title: kind === 'root' ? '新主根' : '新分支', parent, x, y })
   if (!node) return
   treeNodes.push(node)
   renderTree()
-  selectTreeNode(node.id)
 }
 
 // ── 渲染 ───────────────────────────────────────────────────────────────
@@ -326,69 +456,178 @@ function applyTreeTransform() {
   treeEls.edgeGroup.setAttribute('transform', tf)
   treeEls.tempGroup.setAttribute('transform', tf)
   treeEls.zoomLabel.textContent = Math.round(treeZoom * 100) + '%'
-  updateTreePopoverPosition()
+  hideNotePeek()
 }
 
 function renderTree() {
   if (!treeEls) return
   applyTreeTransform()
   renderTreeNodes()
+  renderTreeNotes()
   renderTreeEdges()
   treeEls.addChild.disabled = !treeSelectedId
+}
+
+function treeHeaderTextColor(hex) {
+  const h = String(hex).replace('#', '')
+  const r = parseInt(h.slice(0, 2), 16)
+  const g = parseInt(h.slice(2, 4), 16)
+  const b = parseInt(h.slice(4, 6), 16)
+  const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255
+  return lum > 0.66 ? '#1f2937' : '#ffffff'
 }
 
 function renderTreeNodes() {
   const layer = treeEls.layer
   layer.innerHTML = ''
 
+
   treeNodes.forEach((node) => {
-    const shape = TREE_SHAPES[node.shape] || TREE_SHAPES.rect
-    const color = treeColor(node)
-    const isRoot = node.kind === 'root'
-    const isSel = node.id === treeSelectedId
-    const w = treeW(node)
-    const h = treeH(node)
+    const color = treeBorderColor(node)
+    const notes = treeNotesOf(node.id)
+    const files = treeFilesOf(node.id)
+    const headText = treeHeaderTextColor(color)
 
     const wrap = treeEl('div', 'group absolute select-none')
     wrap.dataset.nodeId = node.id
-    wrap.style.left = (node.x - w / 2) + 'px'
-    wrap.style.top = (node.y - h / 2) + 'px'
-    wrap.style.width = w + 'px'
+    wrap.style.left = (node.x - TREE_WIN_W / 2) + 'px'
+    wrap.style.top = (node.y - TREE_WIN_H / 2) + 'px'
+    wrap.style.width = TREE_WIN_W + 'px'
+    wrap.style.height = TREE_WIN_H + 'px'
 
-    const card = treeEl('div', 'relative px-3 py-2 text-center border shadow-sm transition-shadow ' + shape.cls + ' ' + color.cls)
-    card.style.minHeight = h + 'px'
-    card.style.display = 'flex'
-    card.style.flexDirection = 'column'
-    card.style.justifyContent = 'center'
-    if (shape.style) card.style.cssText += ';' + shape.style
-    if (w < 200) { card.style.paddingLeft = '10px'; card.style.paddingRight = '10px' }
-    if (isSel) card.classList.add('ring-2', 'ring-blue-400', 'ring-offset-2', 'ring-offset-zinc-100', 'dark:ring-offset-zinc-950')
+    const win = treeEl('div', 'absolute inset-0 rounded-lg bg-white dark:bg-zinc-900 overflow-hidden border border-zinc-200/70 dark:border-zinc-700/60')
+    win.style.boxShadow = '0 1px 2px rgba(15,23,42,.05)'
 
-    const titleSize = Math.max(12, Math.min(19, Math.round(w / 15)))
-    const badge = treeEl('span', 'text-[10px] uppercase tracking-wide opacity-70', isRoot ? '主根' : '分支')
-    const title = treeEl('p', 'font-medium leading-snug mt-0.5', node.title || '未命名')
-    title.style.fontSize = titleSize + 'px'
-    title.style.overflow = 'hidden'
-    title.style.display = '-webkit-box'
-    title.style.webkitLineClamp = '3'
-    title.style.webkitBoxOrient = 'vertical'
+    // 纯色标题条（唯一的色块，不再有彩色边框）
+    const head = treeEl('div', 'flex items-center gap-2 px-3 h-10 shrink-0')
+    head.style.background = color
 
-    card.appendChild(badge)
-    card.appendChild(title)
-    wrap.appendChild(card)
+    const dot = treeEl('button', 'w-2.5 h-2.5 rounded-full shrink-0 ring-1 ring-white/60 hover:ring-2 transition-all')
+    dot.type = 'button'
+    dot.style.background = 'rgba(255,255,255,.9)'
+    dot.title = '换标题颜色'
+    dot.addEventListener('pointerdown', (e) => e.stopPropagation())
+    dot.addEventListener('click', (e) => { e.stopPropagation(); openNodeColorPicker(node, wrap) })
 
-    // 下边加分支
-    const addBtn = treeEl('button', 'absolute -bottom-3 left-1/2 -translate-x-1/2 w-6 h-6 rounded-full bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-600 text-zinc-500 dark:text-zinc-300 text-sm leading-none shadow-sm opacity-0 group-hover:opacity-100 hover:bg-blue-500 hover:text-white hover:border-blue-500 transition-all')
-    addBtn.type = 'button'
-    addBtn.textContent = '+'
-    addBtn.title = '在下面加一个分支'
-    addBtn.addEventListener('pointerdown', (e) => e.stopPropagation())
-    addBtn.addEventListener('click', (e) => { e.stopPropagation(); createTreeNode({ kind: 'node', parent: node }) })
-    wrap.appendChild(addBtn)
+    const title = treeEl('p', 'text-[13px] font-semibold tracking-wide truncate flex-1', node.title || '未命名')
+    title.style.color = headText
+    title.style.cursor = 'text'
+    title.title = '双击改名'
+    title.addEventListener('dblclick', (e) => { e.stopPropagation(); startRenameNode(node, title) })
 
-    // 右边连线手柄
-    const handle = treeEl('button', 'absolute -right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-white dark:bg-zinc-800 border-2 border-blue-500 text-blue-500 text-[11px] font-bold leading-none shadow-sm transition-opacity ' +
-      (isRoot ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'))
+    const delNode = treeEl('button', 'shrink-0 w-5 h-5 rounded-md text-[13px] leading-none opacity-0 group-hover:opacity-80 hover:opacity-100 transition-opacity')
+    delNode.type = 'button'
+    delNode.title = '删除节点'
+    delNode.textContent = '×'
+    delNode.style.color = headText
+    delNode.addEventListener('pointerdown', (e) => e.stopPropagation())
+    delNode.addEventListener('click', (e) => { e.stopPropagation(); deleteTreeNode(node) })
+
+    head.appendChild(dot)
+    head.appendChild(title)
+    head.appendChild(delNode)
+    win.appendChild(head)
+
+    // 内容
+    const bodyEl = treeEl('div', 'px-3 pt-2.5 pb-2 flex flex-col')
+    bodyEl.style.height = (TREE_WIN_H - 40) + 'px'
+
+    const sectionHead = (icon, label, count) => {
+      const row = treeEl('div', 'flex items-center gap-1.5 text-zinc-400 dark:text-zinc-500')
+      const ic = treeEl('span', 'shrink-0 inline-flex items-center justify-center w-[18px] h-[18px] rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400')
+      ic.appendChild(treeIcon(icon, 11))
+      row.appendChild(ic)
+      row.appendChild(treeEl('span', 'text-[10.5px] font-medium tracking-wide ml-0.5', label))
+      row.appendChild(treeEl('span', 'ml-auto text-[10px] tabular-nums', String(count)))
+      return row
+    }
+
+    bodyEl.appendChild(sectionHead('lightbulb', '功能实现', notes.length))
+
+    const noteList = treeEl('div', 'mt-1.5 space-y-1')
+    if (notes.length === 0) {
+      noteList.appendChild(treeEl('p', 'text-[11px] text-zinc-300 dark:text-zinc-600 py-0.5', '还没有想法'))
+    } else {
+      notes.slice(-2).forEach((n) => {
+        const c = NOTE_COLORS[n.color] || NOTE_COLORS.yellow
+        const row = treeEl('button', 'group/row flex items-start gap-1.5 w-full text-left rounded px-1 -mx-1 py-0.5 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 transition-colors')
+        row.type = 'button'
+        const av = treeEl('span', 'shrink-0 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-semibold mt-0.5')
+        av.style.background = c.bg
+        av.style.color = c.text
+        av.textContent = String(treeAuthorName(n.author_id)).slice(0, 1)
+        const txt = treeEl('span', 'min-w-0 flex-1 text-[11.5px] text-zinc-600 dark:text-zinc-300 truncate')
+        txt.textContent = treeAuthorName(n.author_id) + '：' + summarizeNote(n.content)
+        row.appendChild(av)
+        row.appendChild(txt)
+        row.addEventListener('pointerdown', (e) => e.stopPropagation())
+        row.addEventListener('click', (e) => { e.stopPropagation(); openTreeNoteEditor(n, node) })
+        noteList.appendChild(row)
+      })
+    }
+    bodyEl.appendChild(noteList)
+
+    bodyEl.appendChild(treeEl('div', 'h-px bg-zinc-100 dark:bg-zinc-800 my-2'))
+    const fileHead = sectionHead('paperclip', '文件传输', files.length)
+    fileHead.style.cursor = 'pointer'
+    fileHead.title = '文件列表 / 投票 / 入库'
+    fileHead.addEventListener('pointerdown', (e) => e.stopPropagation())
+    fileHead.addEventListener('click', (e) => { e.stopPropagation(); openTreeFiles(node) })
+    bodyEl.appendChild(fileHead)
+
+    const fileList = treeEl('div', 'mt-1.5 space-y-1')
+    if (files.length === 0) {
+      fileList.appendChild(treeEl('p', 'text-[11px] text-zinc-300 dark:text-zinc-600 py-0.5', '还没有文件'))
+    } else {
+      files.slice(0, 2).forEach((f) => {
+        const votes = treeVotesOf(f.id).length
+        const voted = treeMyVote(f.id)
+        const row = treeEl('div', 'flex items-center gap-1.5 rounded px-1 -mx-1 py-0.5 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 transition-colors')
+
+        const ic = treeEl('span', 'shrink-0 inline-flex text-zinc-400 dark:text-zinc-500')
+        ic.appendChild(treeIcon('file', 13))
+
+        const name = treeEl('button', 'min-w-0 flex-1 text-left text-[11.5px] text-zinc-700 dark:text-zinc-200 truncate hover:text-blue-500 transition-colors', f.name)
+        name.type = 'button'
+        name.title = '点击打开查看'
+        name.addEventListener('pointerdown', (e) => e.stopPropagation())
+        name.addEventListener('click', (e) => { e.stopPropagation(); previewNodeFile(f) })
+
+        const size = treeEl('span', 'shrink-0 text-[10px] text-zinc-400 dark:text-zinc-500 tabular-nums', fmtBytes(f.size || 0))
+        size.style.display = 'none'
+
+        const vote = treeEl('button', 'shrink-0 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] tabular-nums transition-colors ' +
+          (voted ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300' : 'text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800'))
+        vote.type = 'button'
+        vote.appendChild(treeIcon('thumbs-up', 11))
+        vote.appendChild(treeEl('span', '', String(votes)))
+        vote.title = voted ? '取消投票' : '投票'
+        vote.addEventListener('pointerdown', (e) => e.stopPropagation())
+        vote.addEventListener('click', (e) => { e.stopPropagation(); toggleTreeVote(f) })
+
+        const dl = document.createElement('a')
+        dl.href = f.url
+        dl.setAttribute('download', f.name)
+        dl.className = 'shrink-0 inline-flex p-0.5 text-zinc-400 hover:text-blue-500 transition-colors'
+        dl.title = '下载'
+        dl.appendChild(treeIcon('download', 13))
+        dl.addEventListener('pointerdown', (e) => e.stopPropagation())
+
+        row.appendChild(ic)
+        row.appendChild(name)
+        row.appendChild(vote)
+        row.appendChild(dl)
+        fileList.appendChild(row)
+      })
+    }
+    bodyEl.appendChild(fileList)
+
+
+    win.appendChild(bodyEl)
+    wrap.appendChild(win)
+
+    // 连线手柄
+    const handle = treeEl('button', 'absolute -right-7 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-white dark:bg-zinc-800 border-2 border-blue-500 text-blue-500 text-[11px] font-bold leading-none shadow-sm transition-opacity opacity-0 group-hover:opacity-100')
     handle.type = 'button'
     handle.setAttribute('data-link-handle', '1')
     handle.textContent = '+'
@@ -401,6 +640,39 @@ function renderTreeNodes() {
   })
 }
 
+function summarizeNote(content) {
+  const first = String(content || '').split('\n').find((l) => l.trim() && !l.trim().startsWith('!['))
+  if (!first) return '（图片）'
+  return first.replace(/==/g, '').slice(0, 60)
+}
+
+function startRenameNode(node, nameEl) {
+  const input = document.createElement('input')
+  input.type = 'text'
+  input.value = node.title || ''
+  input.maxLength = 40
+  input.className = 'flex-1 min-w-0 bg-white dark:bg-zinc-800 border border-blue-400 rounded px-1 py-0.5 text-[13px] font-semibold text-zinc-900 dark:text-zinc-100 focus:outline-none'
+  nameEl.replaceWith(input)
+  input.focus()
+  input.select()
+  const commit = async (save) => {
+    if (save) {
+      const v = input.value.trim() || '未命名'
+      const { error } = await supabase.from('tree_nodes').update({ title: v }).eq('id', node.id)
+      if (error) treeEls.hint.textContent = '保存标题失败：' + error.message
+      node.title = v
+    }
+    renderTreeNodes()
+  }
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); commit(true) }
+    if (e.key === 'Escape') { e.preventDefault(); commit(false) }
+  })
+  input.addEventListener('blur', () => commit(true))
+  input.addEventListener('pointerdown', (e) => e.stopPropagation())
+}
+
+// ── 连线 ───────────────────────────────────────────────────────────────
 let treeLinkViews = {}
 
 function treeLinkBase(link) {
@@ -410,7 +682,6 @@ function treeLinkBase(link) {
   return { a, b, mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 }
 }
 
-// 二次贝塞尔：让曲线严格穿过拖动后的手柄位置
 function treeLinkPath(base, link) {
   const hx = base.mx + (link.bend_x || 0)
   const hy = base.my + (link.bend_y || 0)
@@ -430,9 +701,8 @@ function updateTreeLinkVisual(link) {
   view.knob.setAttribute('cy', p.hy)
 }
 
-// 父子连线：按相对位置自动选接边（上下或左右），并支持弯曲
 function treeEdgeBase(parent, child) {
-  const pw = treeW(parent), ph = treeH(parent), cw = treeW(child), ch = treeH(child)
+  const pw = TREE_WIN_W, ph = TREE_WIN_H, cw = TREE_WIN_W, ch = TREE_WIN_H
   const dx = child.x - parent.x
   const dy = child.y - parent.y
   const vertical = Math.abs(dy) >= Math.abs(dx) * 0.6
@@ -481,7 +751,6 @@ function onTreeEdgeKnobDown(e, parent, child) {
   e.preventDefault()
   const rect = treeEls.stage.getBoundingClientRect()
   const base = treeEdgeBase(parent, child)
-
   const onMove = (ev) => {
     const lx = (ev.clientX - rect.left - treePan.x) / treeZoom
     const ly = (ev.clientY - rect.top - treePan.y) / treeZoom
@@ -492,11 +761,10 @@ function onTreeEdgeKnobDown(e, parent, child) {
   const onUp = async () => {
     window.removeEventListener('pointermove', onMove)
     window.removeEventListener('pointerup', onUp)
-    const { error } = await supabase.from('tree_nodes').update({
+    await supabase.from('tree_nodes').update({
       link_bend_x: child.link_bend_x || 0,
       link_bend_y: child.link_bend_y || 0,
     }).eq('id', child.id)
-    if (error) treeEls.hint.textContent = '保存连线形状失败：' + error.message
   }
   window.addEventListener('pointermove', onMove)
   window.addEventListener('pointerup', onUp)
@@ -508,7 +776,6 @@ function onTreeLinkKnobDown(e, link) {
   const rect = treeEls.stage.getBoundingClientRect()
   const base = treeLinkBase(link)
   if (!base) return
-
   const onMove = (ev) => {
     const lx = (ev.clientX - rect.left - treePan.x) / treeZoom
     const ly = (ev.clientY - rect.top - treePan.y) / treeZoom
@@ -519,11 +786,7 @@ function onTreeLinkKnobDown(e, link) {
   const onUp = async () => {
     window.removeEventListener('pointermove', onMove)
     window.removeEventListener('pointerup', onUp)
-    const { error } = await supabase.from('tree_links').update({
-      bend_x: link.bend_x,
-      bend_y: link.bend_y,
-    }).eq('id', link.id)
-    if (error) treeEls.hint.textContent = '保存连线形状失败：' + error.message
+    await supabase.from('tree_links').update({ bend_x: link.bend_x, bend_y: link.bend_y }).eq('id', link.id)
   }
   window.addEventListener('pointermove', onMove)
   window.addEventListener('pointerup', onUp)
@@ -537,7 +800,6 @@ function renderTreeEdges() {
   treeNodes.forEach((n) => { byId[n.id] = n })
   const ns = 'http://www.w3.org/2000/svg'
 
-  // 父子连线：按节点相对位置自动选择接边，可拖弯
   treeNodes.forEach((node) => {
     if (!node.parent_id) return
     const parent = byId[node.parent_id]
@@ -570,15 +832,8 @@ function renderTreeEdges() {
     knob.style.cursor = 'move'
     knob.style.opacity = '0.55'
 
-    hit.addEventListener('pointerenter', () => {
-      path.setAttribute('stroke-width', '3')
-      knob.style.opacity = '1'
-    })
-    hit.addEventListener('pointerleave', () => {
-      path.setAttribute('stroke-width', '2')
-      knob.style.opacity = '0.55'
-    })
-    knob.addEventListener('pointerenter', () => { knob.style.opacity = '1' })
+    hit.addEventListener('pointerenter', () => { path.setAttribute('stroke-width', '3'); knob.style.opacity = '1' })
+    hit.addEventListener('pointerleave', () => { path.setAttribute('stroke-width', '2'); knob.style.opacity = '0.55' })
     hit.addEventListener('pointerdown', (e) => onTreeEdgeKnobDown(e, parent, node))
     knob.addEventListener('pointerdown', (e) => onTreeEdgeKnobDown(e, parent, node))
     knob.addEventListener('dblclick', async (e) => {
@@ -587,7 +842,6 @@ function renderTreeEdges() {
       node.link_bend_y = 0
       renderTreeEdges()
       await supabase.from('tree_nodes').update({ link_bend_x: 0, link_bend_y: 0 }).eq('id', node.id)
-      treeEls.hint.textContent = '连线已拉直（双击圆点可复位）'
     })
 
     g.appendChild(hit)
@@ -595,7 +849,6 @@ function renderTreeEdges() {
     g.appendChild(knob)
   })
 
-  // 跨树连线：可拖弯的曲线
   treeLinks.forEach((link) => {
     const base = treeLinkBase(link)
     if (!base) return
@@ -632,14 +885,6 @@ function renderTreeEdges() {
     hit.addEventListener('pointerleave', () => path.setAttribute('stroke-width', '2.5'))
     hit.addEventListener('pointerdown', (e) => onTreeLinkKnobDown(e, link))
     knob.addEventListener('pointerdown', (e) => onTreeLinkKnobDown(e, link))
-    knob.addEventListener('dblclick', async (e) => {
-      e.stopPropagation()
-      link.bend_x = 0
-      link.bend_y = 0
-      updateTreeLinkVisual(link)
-      await supabase.from('tree_links').update({ bend_x: 0, bend_y: 0 }).eq('id', link.id)
-      treeEls.hint.textContent = '连线已拉直（双击可复位）'
-    })
 
     g.appendChild(hit)
     g.appendChild(path)
@@ -654,6 +899,9 @@ function onNodePointerDown(e, node) {
   if (e.target.closest && e.target.closest('[data-link-handle]')) return
   e.stopPropagation()
   closeTreeMenu()
+  hideNotePeek()
+  treeSelectedId = node.id
+  treeEls.addChild.disabled = false
 
   const startX = e.clientX
   const startY = e.clientY
@@ -669,24 +917,19 @@ function onNodePointerDown(e, node) {
     node.y = ny + dy
     const el = treeEls.layer.querySelector('[data-node-id="' + node.id + '"]')
     if (el) {
-      el.style.left = (node.x - treeW(node) / 2) + 'px'
-      el.style.top = (node.y - treeH(node) / 2) + 'px'
+      el.style.left = (node.x - TREE_WIN_W / 2) + 'px'
+      el.style.top = (node.y - TREE_WIN_H / 2) + 'px'
     }
     renderTreeEdges()
-    updateTreePopoverPosition()
   }
 
   const onUp = async () => {
     window.removeEventListener('pointermove', onMove)
     window.removeEventListener('pointerup', onUp)
     if (moved) {
-      const { error } = await supabase.from('tree_nodes').update({ x: node.x, y: node.y }).eq('id', node.id)
-      if (error) console.error('[tree] 保存位置失败', error.message)
-    } else {
-      selectTreeNode(node.id)
+      await supabase.from('tree_nodes').update({ x: node.x, y: node.y }).eq('id', node.id)
     }
   }
-
   window.addEventListener('pointermove', onMove)
   window.addEventListener('pointerup', onUp)
 }
@@ -695,27 +938,22 @@ function onStagePointerDown(e) {
   if (e.button !== 0) return
   if (e.target !== treeEls.stage && e.target !== treeEls.svg && e.target !== treeEls.layer) return
   closeTreeMenu()
-
+  hideNotePeek()
   const startX = e.clientX
   const startY = e.clientY
   const px = treePan.x
   const py = treePan.y
-  let moved = false
   treeEls.stage.style.cursor = 'grabbing'
 
   const onMove = (ev) => {
-    const dx = ev.clientX - startX
-    const dy = ev.clientY - startY
-    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) moved = true
-    treePan.x = px + dx
-    treePan.y = py + dy
+    treePan.x = px + (ev.clientX - startX)
+    treePan.y = py + (ev.clientY - startY)
     applyTreeTransform()
   }
   const onUp = () => {
     treeEls.stage.style.cursor = 'grab'
     window.removeEventListener('pointermove', onMove)
     window.removeEventListener('pointerup', onUp)
-    if (!moved) deselectTreeNode()
   }
   window.addEventListener('pointermove', onMove)
   window.addEventListener('pointerup', onUp)
@@ -723,8 +961,7 @@ function onStagePointerDown(e) {
 
 function onStageWheel(e) {
   e.preventDefault()
-  const delta = e.deltaY > 0 ? -0.08 : 0.08
-  setTreeZoom(treeZoom + delta)
+  setTreeZoom(treeZoom + (e.deltaY > 0 ? -0.08 : 0.08))
 }
 
 function setTreeZoom(z) {
@@ -735,20 +972,18 @@ function setTreeZoom(z) {
 function fitTreeView() {
   if (!treeEls) return
   if (treeNodes.length === 0) { treePan = { x: 200, y: 160 }; treeZoom = 1; applyTreeTransform(); return }
-
   let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity
   treeNodes.forEach((n) => {
-    minX = Math.min(minX, n.x - treeW(n) / 2)
-    maxX = Math.max(maxX, n.x + treeW(n) / 2)
-    minY = Math.min(minY, n.y - treeH(n) / 2)
-    maxY = Math.max(maxY, n.y + treeH(n) / 2)
+    minX = Math.min(minX, n.x - TREE_WIN_W / 2)
+    maxX = Math.max(maxX, n.x + TREE_WIN_W / 2)
+    minY = Math.min(minY, n.y - TREE_WIN_H / 2)
+    maxY = Math.max(maxY, n.y + TREE_WIN_H / 2)
   })
-
   const w = Math.max(1, maxX - minX)
   const h = Math.max(1, maxY - minY)
   const rect = treeEls.stage.getBoundingClientRect()
   const pad = 70
-  const z = Math.min(1.2, Math.max(0.4, Math.min((rect.width - pad * 2) / w, (rect.height - pad * 2) / h)))
+  const z = Math.min(1.15, Math.max(0.4, Math.min((rect.width - pad * 2) / w, (rect.height - pad * 2) / h)))
   treeZoom = Math.round(z * 100) / 100
   treePan.x = rect.width / 2 - ((minX + maxX) / 2) * treeZoom
   treePan.y = rect.height / 2 - ((minY + maxY) / 2) * treeZoom
@@ -764,40 +999,26 @@ function openTreeMenu(clientX, clientY) {
 
   const menu = treeEls.menu
   menu.innerHTML = ''
-
-  const mk = (label, fn, icon) => {
-    const b = treeEl('button', 'w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-[0.99] transition-all text-left')
+  const mk = (label, fn) => {
+    const b = treeEl('button', 'w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-left')
     b.type = 'button'
-    if (icon) {
-      const s = treeEl('span', 'w-4 h-4 shrink-0 text-zinc-400')
-      s.innerHTML = icon
-      b.appendChild(s)
-    }
-    b.appendChild(treeEl('span', '', label))
+    b.textContent = label
     b.addEventListener('click', fn)
     menu.appendChild(b)
   }
-
-  mk('在这里新建主根', () => createRootAt(lx, ly),
-    '<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v8M8 12h8"/></svg>')
-
+  mk('在这里新建主根', () => createRootAt(lx, ly))
   if (treeSelectedId) {
     const sel = treeNodeById(treeSelectedId)
-    mk(`在「${(sel && sel.title) || '选中节点'}」下加分支`, () => {
+    mk('在选中节点下加分支', () => {
       closeTreeMenu()
       if (sel) createTreeNode({ kind: 'node', parent: sel })
-    }, '<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>')
+    })
   }
-
   menu.appendChild(treeEl('div', 'my-1 h-px bg-zinc-100 dark:bg-zinc-800'))
+  mk('视图居中', () => { closeTreeMenu(); fitTreeView() })
 
-  mk('视图居中', () => { closeTreeMenu(); fitTreeView() },
-    '<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/><circle cx="12" cy="12" r="4"/></svg>')
-
-  const left = Math.min(Math.max(8, clientX - rect.left), rect.width - 230)
-  const top = Math.min(Math.max(8, clientY - rect.top), rect.height - 170)
-  menu.style.left = left + 'px'
-  menu.style.top = top + 'px'
+  menu.style.left = Math.min(Math.max(8, clientX - rect.left), rect.width - 210) + 'px'
+  menu.style.top = Math.min(Math.max(8, clientY - rect.top), rect.height - 160) + 'px'
   menu.classList.remove('hidden')
 }
 
@@ -805,30 +1026,27 @@ function closeTreeMenu() {
   if (treeEls) treeEls.menu.classList.add('hidden')
 }
 
-// ── 连线（拖手柄） ─────────────────────────────────────────────────────
+// ── 连线手柄 ───────────────────────────────────────────────────────────
 function onLinkHandleDown(e, node) {
   e.stopPropagation()
   e.preventDefault()
   closeTreeMenu()
+  hideNotePeek()
   const rect = treeEls.stage.getBoundingClientRect()
   const ns = 'http://www.w3.org/2000/svg'
   const line = document.createElementNS(ns, 'line')
   line.setAttribute('stroke', '#3b82f6')
   line.setAttribute('stroke-width', '2')
   line.setAttribute('stroke-dasharray', '6 6')
-  const sx = node.x + treeW(node) / 2
+  const sx = node.x + TREE_WIN_W / 2
   const sy = node.y
-  line.setAttribute('x1', sx)
-  line.setAttribute('y1', sy)
-  line.setAttribute('x2', sx)
-  line.setAttribute('y2', sy)
+  line.setAttribute('x1', sx); line.setAttribute('y1', sy)
+  line.setAttribute('x2', sx); line.setAttribute('y2', sy)
   treeEls.tempGroup.appendChild(line)
 
   const onMove = (ev) => {
-    const lx = (ev.clientX - rect.left - treePan.x) / treeZoom
-    const ly = (ev.clientY - rect.top - treePan.y) / treeZoom
-    line.setAttribute('x2', lx)
-    line.setAttribute('y2', ly)
+    line.setAttribute('x2', (ev.clientX - rect.left - treePan.x) / treeZoom)
+    line.setAttribute('y2', (ev.clientY - rect.top - treePan.y) / treeZoom)
   }
   const onUp = async (ev) => {
     window.removeEventListener('pointermove', onMove)
@@ -837,10 +1055,7 @@ function onLinkHandleDown(e, node) {
     const el = document.elementFromPoint(ev.clientX, ev.clientY)
     const wrap = el && el.closest ? el.closest('[data-node-id]') : null
     const targetId = wrap ? wrap.dataset.nodeId : null
-    if (!targetId || targetId === node.id) {
-      treeEls.hint.textContent = '连线取消：请拖到另一个节点上'
-      return
-    }
+    if (!targetId || targetId === node.id) { treeEls.hint.textContent = '连线取消：请拖到另一个节点上'; return }
     await createTreeLink(node.id, targetId)
   }
   window.addEventListener('pointermove', onMove)
@@ -849,350 +1064,423 @@ function onLinkHandleDown(e, node) {
 
 async function createTreeLink(fromId, toId) {
   const exists = treeLinks.some((l) =>
-    (l.from_node === fromId && l.to_node === toId) ||
-    (l.from_node === toId && l.to_node === fromId))
+    (l.from_node === fromId && l.to_node === toId) || (l.from_node === toId && l.to_node === fromId))
   if (exists) { treeEls.hint.textContent = '这两个节点已经连过了'; return }
-
   const { data, error } = await supabase.from('tree_links').insert({
-    project_id: treeProjectId,
-    from_node: fromId,
-    to_node: toId,
+    project_id: treeProjectId, from_node: fromId, to_node: toId,
   }).select().single()
-
   if (error) { treeEls.hint.textContent = '连线失败：' + error.message; return }
   treeLinks.push(Object.assign({ bend_x: 0, bend_y: 0 }, data))
   renderTreeEdges()
   treeEls.hint.textContent = '连线成功'
 }
 
-// ── 节点信息浮窗 ───────────────────────────────────────────────────────
-function deselectTreeNode() {
-  treeSelectedId = null
-  treePopoverNodeId = null
-  renderTreeNodes()
-  treeEls.popover.classList.add('hidden')
+// ── 便签：悬停预览 ─────────────────────────────────────────────────────
+function renderNoteLines(container, content, noteColor) {
+  const c = NOTE_COLORS[noteColor] || NOTE_COLORS.yellow
+  const lines = String(content || '').split('\n')
+  lines.forEach((line) => {
+    const img = line.match(/^!\[[^\]]*\]\(([^)]+)\)\s*$/)
+    if (img) {
+      const wrap = document.createElement('div')
+      wrap.style.padding = '4px 0 8px'
+      const el = document.createElement('img')
+      el.src = img[1]
+      el.style.maxWidth = '100%'
+      el.style.borderRadius = '6px'
+      el.style.border = '1px solid ' + c.edge
+      wrap.appendChild(el)
+      container.appendChild(wrap)
+      return
+    }
+    const row = document.createElement('div')
+    row.style.height = '24px'
+    row.style.lineHeight = '24px'
+    row.style.borderBottom = '1px solid rgba(0,0,0,0.12)'
+    row.style.fontSize = '13px'
+    row.style.color = c.text
+    row.style.whiteSpace = 'pre-wrap'
+    row.style.overflow = 'hidden'
+    row.innerHTML = escapeHtml(line).replace(/==([^=]+)==/g, '<mark style="background:linear-gradient(180deg,transparent 40%,#fde047 40%,#fde047 90%,transparent 90%);padding:0">$1</mark>')
+    container.appendChild(row)
+  })
 }
 
-function updateTreePopoverPosition() {
-  if (!treeEls) return
-  const pop = treeEls.popover
-  if (pop.classList.contains('hidden') || !treePopoverNodeId) return
-  const node = treeNodeById(treePopoverNodeId)
-  if (!node) return
+function showNotePeek(note, anchor) {
+  if (treePeekTimer) { clearTimeout(treePeekTimer); treePeekTimer = null }
+  const peek = treeEls.peek
+  const c = NOTE_COLORS[note.color] || NOTE_COLORS.yellow
+  peek.innerHTML = ''
+  peek.className = 'fixed z-[140] w-[260px] rounded-lg shadow-xl overflow-hidden'
+  peek.style.background = c.bg
+  peek.style.border = '2px solid ' + c.edge
 
-  const rect = treeEls.stage.getBoundingClientRect()
-  const w = treeW(node)
-  const rightX = treePan.x + (node.x + w / 2) * treeZoom + 14
-  const leftX = treePan.x + (node.x - w / 2) * treeZoom - pop.offsetWidth - 14
-  let left = rightX
-  if (left + pop.offsetWidth > rect.width - 8) left = Math.max(8, leftX)
-  let top = treePan.y + (node.y - treeH(node) / 2) * treeZoom
-  top = Math.max(8, Math.min(top, rect.height - Math.min(pop.offsetHeight, 240) - 8))
+  const head = treeEl('div', 'px-2.5 py-1 flex items-center gap-2')
+  head.style.borderBottom = '1px solid ' + c.edge
+  head.appendChild(treeEl('span', 'text-[11px] font-medium', treeAuthorName(note.author_id))).style.color = c.text
+  const time = treeEl('span', 'text-[10px] opacity-70 ml-auto', fmtRel(new Date(note.created_at).getTime()))
+  time.style.color = c.text
+  head.appendChild(time)
 
-  pop.style.left = left + 'px'
-  pop.style.top = top + 'px'
+  const bodyEl = treeEl('div', 'px-2.5 py-1 max-h-[280px] overflow-auto')
+  renderNoteLines(bodyEl, note.content, note.color)
+
+  peek.appendChild(head)
+  peek.appendChild(bodyEl)
+
+  const r = anchor.getBoundingClientRect()
+  let left = r.right + 10
+  if (left + 268 > window.innerWidth - 8) left = r.left - 270
+  let top = r.top
+  top = Math.max(8, Math.min(top, window.innerHeight - 240))
+  peek.style.left = Math.max(8, left) + 'px'
+  peek.style.top = top + 'px'
+  peek.classList.remove('hidden')
 }
 
-async function selectTreeNode(id) {
-  treeSelectedId = id
-  renderTreeNodes()
-  treeEls.addChild.disabled = !id
-  treePopoverCollapsed = false
-  await openTreePopover(id)
+function scheduleHideNotePeek() {
+  if (treePeekTimer) clearTimeout(treePeekTimer)
+  treePeekTimer = setTimeout(() => hideNotePeek(), 120)
 }
 
-async function openTreePopover(nodeId) {
-  const node = treeNodeById(nodeId)
-  if (!node) return
-  treePopoverNodeId = nodeId
+function hideNotePeek() {
+  if (treePeekTimer) { clearTimeout(treePeekTimer); treePeekTimer = null }
+  if (treeEls && treeEls.peek) {
+    treeEls.peek.classList.add('hidden')
+    treeEls.peek.innerHTML = ''
+  }
+}
 
-  const { data: notes } = await supabase.from('node_notes').select('*').eq('node_id', nodeId).order('created_at', { ascending: true })
-  const { data: nfiles } = await supabase.from('node_files').select('*').eq('node_id', nodeId).order('created_at', { ascending: false })
-  treeNotes = notes || []
-  treeNodeFiles = nfiles || []
+// ── 便签编辑器 ─────────────────────────────────────────────────────────
+function ensureNoteEditor() {
+  let modal = document.getElementById('tree-note-editor')
+  if (modal) return modal
+  modal = treeEl('div', 'hidden fixed inset-0 z-[130] flex items-center justify-center p-4 bg-black/40')
+  modal.id = 'tree-note-editor'
+
+  const card = treeEl('div', 'w-full max-w-md rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 shadow-2xl overflow-hidden')
+  const head = treeEl('div', 'flex items-center gap-2 px-4 py-3 border-b border-zinc-100 dark:border-zinc-800')
+  head.appendChild(treeEl('p', 'text-sm font-medium text-zinc-900 dark:text-zinc-100', '便签'))
+  const close = treeEl('button', 'ml-auto p-1.5 rounded-lg text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-95', '×')
+  close.type = 'button'
+  head.appendChild(close)
+
+  const bodyEl = treeEl('div', 'p-4 space-y-3')
+  const colorRow = treeEl('div', 'flex items-center gap-1.5')
+  const ta = document.createElement('textarea')
+  ta.rows = 7
+  ta.placeholder = '写点东西… 用 ==文字== 做荧光标记'
+  ta.className = 'w-full rounded-xl px-3 py-2 text-[13px] text-zinc-800 border focus:outline-none focus:ring-2 focus:ring-blue-500/30 resize-none'
+  ta.style.lineHeight = '24px'
+  ta.style.backgroundImage = 'repeating-linear-gradient(to bottom, transparent 0, transparent 23px, rgba(0,0,0,0.08) 23px, rgba(0,0,0,0.08) 24px)'
+  ta.style.backgroundAttachment = 'local'
+
+  const tools = treeEl('div', 'flex items-center gap-1.5')
+  const hlBtn = treeEl('button', 'px-2 py-1 rounded-lg text-[11px] font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-zinc-700', '🖍 高亮')
+  hlBtn.type = 'button'
+  const imgBtn = treeEl('button', 'px-2 py-1 rounded-lg text-[11px] font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-zinc-700', '🖼 图片')
+  imgBtn.type = 'button'
+  const fileInput = document.createElement('input')
+  fileInput.type = 'file'
+  fileInput.accept = 'image/*'
+  fileInput.className = 'hidden'
+  const delBtn = treeEl('button', 'ml-auto px-2 py-1 rounded-lg text-[11px] font-medium text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20', '删除')
+  delBtn.type = 'button'
+
+  tools.appendChild(hlBtn)
+  tools.appendChild(imgBtn)
+  tools.appendChild(fileInput)
+  tools.appendChild(delBtn)
+
+  const actions = treeEl('div', 'flex items-center gap-2 pt-1')
+  const cancel = treeEl('button', 'flex-1 px-3 py-2 rounded-xl text-sm bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 active:scale-95', '取消')
+  cancel.type = 'button'
+  const save = treeEl('button', 'flex-1 px-3 py-2 rounded-xl text-sm font-medium bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 active:scale-95', '保存')
+  save.type = 'button'
+  actions.appendChild(cancel)
+  actions.appendChild(save)
+
+  bodyEl.appendChild(colorRow)
+  bodyEl.appendChild(ta)
+  bodyEl.appendChild(tools)
+  bodyEl.appendChild(actions)
+
+  card.appendChild(head)
+  card.appendChild(bodyEl)
+  modal.appendChild(card)
+  document.body.appendChild(modal)
+
+  treeEls.noteEditor = { modal, ta, colorRow, hlBtn, imgBtn, fileInput, delBtn, save, cancel, close }
+  close.addEventListener('click', closeTreeNoteEditor)
+  cancel.addEventListener('click', closeTreeNoteEditor)
+  modal.addEventListener('pointerdown', (e) => { if (e.target === modal) closeTreeNoteEditor() })
+  return modal
+}
+
+function openTreeNoteEditor(note, node) {
+  ensureNoteEditor()
+  const center = treeViewCenter()
+  treeNewNotePos = note ? null : (node
+    ? { x: node.x + TREE_WIN_W / 2 + 24, y: node.y - 90, width: 210, height: 210 }
+    : { x: center.x - 100, y: center.y - 100, width: 200, height: 200 })
+  const ed = treeEls.noteEditor
+  treeEditingNote = note || null
+  treeEditorNodeId = node ? node.id : null
+  const cur = note ? (note.color || 'yellow') : 'yellow'
+
+  ed.colorRow.innerHTML = ''
+  Object.keys(NOTE_COLORS).forEach((key) => {
+    const c = NOTE_COLORS[key]
+    const b = treeEl('button', 'w-6 h-6 rounded-full border-2 transition-transform active:scale-95')
+    b.type = 'button'
+    b.style.background = c.bg
+    b.style.borderColor = key === cur ? c.edge : 'transparent'
+    b.title = c.label
+    b.dataset.color = key
+    b.addEventListener('click', () => {
+      ed.colorRow.dataset.selected = key
+      Array.from(ed.colorRow.children).forEach((x) => {
+        x.style.borderColor = x.dataset.color === key ? NOTE_COLORS[x.dataset.color].edge : 'transparent'
+      })
+    })
+    ed.colorRow.appendChild(b)
+  })
+  ed.colorRow.dataset.selected = cur
+
+  ed.ta.value = note ? note.content : ''
+  ed.delBtn.style.display = note ? '' : 'none'
+  ed.modal.classList.remove('hidden')
+  ed.ta.focus()
+
+  ed.hlBtn.onclick = () => {
+    const s = ed.ta.selectionStart
+    const e = ed.ta.selectionEnd
+    if (s === e) return
+    const v = ed.ta.value
+    ed.ta.value = v.slice(0, s) + '==' + v.slice(s, e) + '==' + v.slice(e)
+    ed.ta.focus()
+  }
+  ed.imgBtn.onclick = () => ed.fileInput.click()
+  ed.fileInput.onchange = async () => {
+    const f = ed.fileInput.files && ed.fileInput.files[0]
+    if (!f) return
+    ed.fileInput.value = ''
+    const safe = f.name.replace(/[^\w.\-]/g, '_')
+    const path = `notes/${treeEditorNodeId}/${Date.now()}-${safe}`
+    const { data: ud, error } = await supabase.storage.from('uploads').upload(path, f, { cacheControl: '3600', upsert: false, contentType: f.type || 'image/png' })
+    if (error) { treeEls.hint.textContent = '图片上传失败：' + error.message; return }
+    const { data: pub } = supabase.storage.from('uploads').getPublicUrl(ud.path)
+    ed.ta.value += (ed.ta.value ? '\n' : '') + `![](${pub.publicUrl})`
+  }
+  ed.save.onclick = () => saveTreeNote(ed)
+  ed.delBtn.onclick = () => deleteTreeNote(note)
+}
+
+function closeTreeNoteEditor() {
+  const modal = document.getElementById('tree-note-editor')
+  if (modal) modal.classList.add('hidden')
+  treeEditingNote = null
+  treeEditorNodeId = null
+}
+
+async function saveTreeNote(ed) {
+  const content = ed.ta.value.trim()
+  if (!content) { closeTreeNoteEditor(); return }
+  const color = ed.colorRow.dataset.selected || 'yellow'
+  const note = treeEditingNote
+  if (note) {
+    const { error } = await supabase.from('node_notes').update({ content, color }).eq('id', note.id)
+    if (error) { treeEls.hint.textContent = '保存失败：' + error.message; return }
+    note.content = content
+    note.color = color
+  } else {
+    const { data, error } = await supabase.from('node_notes').insert(Object.assign({
+      node_id: treeEditorNodeId,
+      project_id: treeProjectId,
+      author_id: currentUser ? currentUser.id : null,
+      content,
+      color,
+    }, treeNewNotePos || {})).select().single()
+    if (error) { treeEls.hint.textContent = '保存失败：' + error.message; return }
+    if (data) treeNotes.push(data)
+  }
+  closeTreeNoteEditor()
   await loadTreeProfiles()
-
-  if (treePopoverNodeId !== nodeId) return
-  renderTreePopover(node)
+  renderTreeNodes()
+  if (treePopoverNode) renderTreePopover(treePopoverNode)
+  treeEls.hint.textContent = '便签已保存'
 }
 
-function renderTreePopover(node) {
-  const pop = treeEls.popover
-  pop.innerHTML = ''
-  pop.classList.remove('hidden')
+async function deleteTreeNote(note) {
+  if (!note) return
+  const ok = await confirmDialog({ title: '删除便签', message: '确定删除这条便签吗？', okText: '删除' })
+  if (!ok) return
+  await supabase.from('node_notes').delete().eq('id', note.id)
+  treeNotes = treeNotes.filter((n) => n.id !== note.id)
+  closeTreeNoteEditor()
+  renderTree()
+  if (treePopoverNode) renderTreePopover(treePopoverNode)
+}
 
-  if (treePopoverCollapsed) {
-    pop.className = 'absolute z-30'
-    const btn = treeEl('button', 'w-9 h-9 rounded-full bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 shadow-md text-zinc-500 dark:text-zinc-300 hover:text-blue-500 active:scale-95 transition-all', '⋯')
-    btn.type = 'button'
-    btn.title = '展开节点信息'
-    btn.addEventListener('click', () => { treePopoverCollapsed = false; renderTreePopover(node); updateTreePopoverPosition() })
-    pop.appendChild(btn)
-    updateTreePopoverPosition()
+// ── 节点附件 ───────────────────────────────────────────────────────────
+function ensureTreeFilesModal() {
+  let modal = document.getElementById('tree-files-modal')
+  if (modal) return modal
+  modal = treeEl('div', 'hidden fixed inset-0 z-[130] flex items-center justify-center p-4 bg-black/40')
+  modal.id = 'tree-files-modal'
+  const card = treeEl('div', 'w-full max-w-md max-h-[80vh] rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 shadow-2xl flex flex-col overflow-hidden')
+  const head = treeEl('div', 'flex items-center gap-2 px-4 py-3 border-b border-zinc-100 dark:border-zinc-800 shrink-0')
+  const t = treeEl('p', 'text-sm font-medium text-zinc-900 dark:text-zinc-100', '节点附件')
+  const up = treeEl('button', 'ml-auto px-2 py-1 rounded-lg text-[11px] font-medium bg-zinc-900 text-white dark:bg-white dark:text-zinc-900', '上传')
+  up.type = 'button'
+  const close = treeEl('button', 'p-1.5 rounded-lg text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800', '×')
+  close.type = 'button'
+  const input = document.createElement('input')
+  input.type = 'file'
+  input.className = 'hidden'
+  head.appendChild(t)
+  head.appendChild(up)
+  head.appendChild(close)
+  head.appendChild(input)
+  const list = treeEl('div', 'p-4 space-y-2 overflow-y-auto')
+  card.appendChild(head)
+  card.appendChild(list)
+  modal.appendChild(card)
+  document.body.appendChild(modal)
+  treeEls.filesModal = { modal, list, up, input, close }
+  close.addEventListener('click', closeTreeFiles)
+  modal.addEventListener('pointerdown', (e) => { if (e.target === modal) closeTreeFiles() })
+  return modal
+}
+
+async function openTreeFiles(node) {
+  ensureTreeFilesModal()
+  treeFilesNode = node
+  const fm = treeEls.filesModal
+  fm.modal.classList.remove('hidden')
+  await renderTreeFiles()
+}
+
+function closeTreeFiles() {
+  const modal = document.getElementById('tree-files-modal')
+  if (modal) modal.classList.add('hidden')
+  treeFilesNode = null
+}
+
+async function renderTreeFiles() {
+  const fm = treeEls.filesModal
+  const node = treeFilesNode
+  if (!node) return
+
+  const files = treeFilesOf(node.id)
+    .slice()
+    .sort((a, b) => treeVotesOf(b.id).length - treeVotesOf(a.id).length)
+
+  fm.list.innerHTML = ''
+  if (files.length === 0) {
+    fm.list.appendChild(treeEl('p', 'text-xs text-zinc-400 text-center py-6', '还没有附件'))
+    fm.up.onclick = () => fm.input.click()
+    fm.input.onchange = async () => {
+      const file = fm.input.files && fm.input.files[0]
+      if (!file) return
+      fm.input.value = ''
+      await uploadNodeFile(node, file)
+      await renderTreeFiles()
+      renderTreeNodes()
+    }
     return
   }
 
-  pop.className = 'absolute z-30 w-[320px] max-h-[calc(100%-16px)] overflow-y-auto rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-xl'
+  const topVotes = treeVotesOf(files[0].id).length
 
-  // 头部
-  const head = treeEl('div', 'flex items-center gap-2 px-3 py-2 border-b border-zinc-100 dark:border-zinc-800 sticky top-0 bg-white dark:bg-zinc-900 z-10')
-  const badge = treeEl('span', 'px-2 py-0.5 rounded-lg text-[11px] font-medium ' +
-    (node.kind === 'root' ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300' : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300'),
-    node.kind === 'root' ? '主根' : '分支')
+  files.forEach((f, idx) => {
+    const votes = treeVotesOf(f.id).length
+    const voted = treeMyVote(f.id)
 
-  const collapseBtn = treeEl('button', 'ml-auto p-1.5 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 active:scale-95 transition-all')
-  collapseBtn.type = 'button'
-  collapseBtn.title = '收起'
-  collapseBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></svg>'
-  collapseBtn.addEventListener('click', () => { treePopoverCollapsed = true; renderTreePopover(node); updateTreePopoverPosition() })
+    const row = treeEl('div', 'rounded-xl border border-zinc-100 dark:border-zinc-800 px-3 py-2')
 
-  const delBtn = treeEl('button', 'p-1.5 rounded-lg text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 active:scale-95 transition-all')
-  delBtn.type = 'button'
-  delBtn.title = '删除节点'
-  delBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M6 6l1 14a2 2 0 002 2h6a2 2 0 002-2l1-14"/></svg>'
-  delBtn.addEventListener('click', () => deleteTreeNode(node))
+    const top = treeEl('div', 'flex items-center gap-2')
+    const name = treeEl('button', 'text-sm text-zinc-900 dark:text-zinc-100 truncate flex-1 text-left hover:text-blue-500 transition-colors', f.name)
+    name.type = 'button'
+    name.title = '点击打开查看'
+    name.addEventListener('click', () => previewNodeFile(f))
+    top.appendChild(name)
+    if (idx === 0 && topVotes > 0) {
+      const badge = treeEl('span', 'shrink-0 px-1.5 py-0.5 rounded-md text-[10px] bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200', '票数最高')
+      top.appendChild(badge)
+    }
+    if (f.status === 'approved') {
+      top.appendChild(treeEl('span', 'shrink-0 px-1.5 py-0.5 rounded-md text-[10px] bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-200', '已入库'))
+    }
+    row.appendChild(top)
 
-  head.appendChild(badge)
-  head.appendChild(collapseBtn)
-  head.appendChild(delBtn)
-  pop.appendChild(head)
+    const meta = treeEl('p', 'text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5',
+      `${fmtBytes(f.size || 0)} · ${treeAuthorName(f.author_id)} · ${treeVotesOf(f.id).length} 票`)
+    row.appendChild(meta)
 
-  // 标题
-  const body = treeEl('div', 'p-3 space-y-3')
-  const titleInput = document.createElement('input')
-  titleInput.type = 'text'
-  titleInput.value = node.title || ''
-  titleInput.maxLength = 40
-  titleInput.placeholder = '节点大标题'
-  titleInput.className = 'w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-sm font-medium text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500'
-  titleInput.addEventListener('change', async () => {
-    const v = titleInput.value.trim() || '未命名节点'
-    const { error } = await supabase.from('tree_nodes').update({ title: v }).eq('id', node.id)
-    if (error) { treeEls.hint.textContent = '保存标题失败：' + error.message; return }
-    node.title = v
-    renderTreeNodes()
-  })
-  body.appendChild(titleInput)
+    const actions = treeEl('div', 'flex items-center gap-2 mt-1.5')
 
-  // 主根形状
-  if (node.kind === 'root') {
-    const shapeRow = treeEl('div', '')
-    shapeRow.appendChild(treeEl('p', 'text-[11px] text-zinc-500 dark:text-zinc-400 mb-1', '形状'))
-    const wrap = treeEl('div', 'flex flex-wrap gap-1.5')
-    Object.keys(TREE_SHAPES).forEach((key) => {
-      const s = TREE_SHAPES[key]
-      const b = treeEl('button', 'px-2 py-0.5 rounded-lg text-[11px] border transition-all active:scale-95 ' +
-        (node.shape === key
-          ? 'bg-zinc-900 text-white border-zinc-900 dark:bg-white dark:text-zinc-900 dark:border-white'
-          : 'bg-white dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700'),
-        s.label)
-      b.type = 'button'
-      b.addEventListener('click', async () => {
-        const { error } = await supabase.from('tree_nodes').update({ shape: key }).eq('id', node.id)
-        if (error) { treeEls.hint.textContent = '保存形状失败：' + error.message; return }
-        node.shape = key
-        renderTreeNodes()
-        renderTreePopover(node)
-      })
-      wrap.appendChild(b)
-    })
-    shapeRow.appendChild(wrap)
-    body.appendChild(shapeRow)
-  }
+    const vote = treeEl('button', 'text-[11px] px-2 py-0.5 rounded-lg font-medium ' +
+      (voted ? 'bg-blue-500 text-white' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200'),
+      (voted ? '已投 · ' : '👍 ') + votes)
+    vote.type = 'button'
+    vote.addEventListener('click', () => toggleTreeVote(f))
 
-  // 颜色
-  const colorRow = treeEl('div', '')
-  colorRow.appendChild(treeEl('p', 'text-[11px] text-zinc-500 dark:text-zinc-400 mb-1', '颜色'))
-  const swatches = treeEl('div', 'flex flex-wrap gap-1.5')
-  Object.keys(TREE_COLORS).forEach((key) => {
-    const c = TREE_COLORS[key]
-    const b = treeEl('button', 'w-6 h-6 rounded-full border transition-all active:scale-95 ' + c.swatch +
-      (node.color === key ? ' ring-2 ring-blue-500 ring-offset-1 dark:ring-offset-zinc-900' : ' border-transparent'))
-    b.type = 'button'
-    b.title = c.label
-    b.addEventListener('click', async () => {
-      const { error } = await supabase.from('tree_nodes').update({ color: key }).eq('id', node.id)
-      if (error) { treeEls.hint.textContent = '保存颜色失败：' + error.message; return }
-      node.color = key
+    const dl = document.createElement('a')
+    dl.href = f.url
+    dl.setAttribute('download', f.name)
+    dl.className = 'text-[11px] text-zinc-600 dark:text-zinc-300 hover:underline'
+    dl.textContent = '下载'
+
+    const approve = treeEl('button', 'text-[11px] text-blue-600 dark:text-blue-300 hover:underline',
+      f.status === 'approved' ? '重新入库' : '上传到项目库')
+    approve.type = 'button'
+    approve.addEventListener('click', async () => {
+      await approveNodeFile(f)
+      await renderTreeFiles()
       renderTreeNodes()
-      renderTreePopover(node)
     })
-    swatches.appendChild(b)
+
+    const del = treeEl('button', 'ml-auto text-[11px] text-red-500 hover:underline', '删除')
+    del.type = 'button'
+    del.addEventListener('click', async () => {
+      await supabase.storage.from('uploads').remove([f.path])
+      await supabase.from('node_files').delete().eq('id', f.id)
+      treeNodeFiles = treeNodeFiles.filter((x) => x.id !== f.id)
+      treeVotes = treeVotes.filter((v) => v.file_id !== f.id)
+      renderTreeNodes()
+      await renderTreeFiles()
+    })
+
+    actions.appendChild(vote)
+    actions.appendChild(dl)
+    actions.appendChild(approve)
+    actions.appendChild(del)
+    row.appendChild(actions)
+
+    fm.list.appendChild(row)
   })
-  colorRow.appendChild(swatches)
-  body.appendChild(colorRow)
 
-  // 尺寸
-  const sizeRow = treeEl('div', 'space-y-2')
-  const mkRange = (label, value, min, max, onInput, onChange) => {
-    const wrap = treeEl('div', '')
-    const top = treeEl('div', 'flex items-center justify-between mb-0.5')
-    top.appendChild(treeEl('span', 'text-[11px] text-zinc-500 dark:text-zinc-400', label))
-    const val = treeEl('span', 'text-[11px] text-zinc-500 dark:text-zinc-400', value + 'px')
-    top.appendChild(val)
-    const input = document.createElement('input')
-    input.type = 'range'
-    input.min = String(min)
-    input.max = String(max)
-    input.step = '2'
-    input.value = String(value)
-    input.className = 'w-full h-1.5 accent-blue-500'
-    input.addEventListener('input', () => {
-      val.textContent = input.value + 'px'
-      onInput(Number(input.value))
-    })
-    input.addEventListener('change', () => onChange(Number(input.value)))
-    wrap.appendChild(top)
-    wrap.appendChild(input)
-    return wrap
+  fm.up.onclick = () => fm.input.click()
+  fm.input.onchange = async () => {
+    const file = fm.input.files && fm.input.files[0]
+    if (!file) return
+    fm.input.value = ''
+    await uploadNodeFile(node, file)
+    await renderTreeFiles()
+    renderTreeNodes()
   }
-
-  sizeRow.appendChild(mkRange('宽度', treeW(node), 140, 360,
-    (v) => {
-      node.width = v
-      renderTreeNodes(); renderTreeEdges(); updateTreePopoverPosition()
-    },
-    async (v) => {
-      const { error } = await supabase.from('tree_nodes').update({ width: v }).eq('id', node.id)
-      if (error) treeEls.hint.textContent = '保存宽度失败：' + error.message
-    }))
-
-  sizeRow.appendChild(mkRange('高度', treeH(node), 56, 180,
-    (v) => {
-      node.height = v
-      renderTreeNodes(); renderTreeEdges(); updateTreePopoverPosition()
-    },
-    async (v) => {
-      const { error } = await supabase.from('tree_nodes').update({ height: v }).eq('id', node.id)
-      if (error) treeEls.hint.textContent = '保存高度失败：' + error.message
-    }))
-  body.appendChild(sizeRow)
-
-  // 想法
-  const noteSection = treeEl('div', 'pt-1 border-t border-zinc-100 dark:border-zinc-800')
-  noteSection.appendChild(treeEl('p', 'text-xs font-medium text-zinc-900 dark:text-zinc-100 mt-2 mb-1.5', `大家的想法 · ${treeNotes.length}`))
-
-  const ta = document.createElement('textarea')
-  ta.rows = 2
-  ta.placeholder = '写下你的想法…'
-  ta.className = 'w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 resize-none'
-  noteSection.appendChild(ta)
-
-  const noteBtn = treeEl('button', 'mt-1.5 w-full px-3 py-1.5 rounded-xl text-sm font-medium bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 active:scale-95 transition-all', '添加想法')
-  noteBtn.type = 'button'
-  noteBtn.addEventListener('click', async () => {
-    const content = ta.value.trim()
-    if (!content) return
-    noteBtn.disabled = true
-    const { error } = await supabase.from('node_notes').insert({
-      node_id: node.id,
-      author_id: currentUser ? currentUser.id : null,
-      content,
-    })
-    noteBtn.disabled = false
-    if (error) { treeEls.hint.textContent = '添加失败：' + error.message; return }
-    ta.value = ''
-    await openTreePopover(node.id)
-  })
-  noteSection.appendChild(noteBtn)
-
-  if (treeNotes.length > 0) {
-    const list = treeEl('div', 'mt-2 space-y-2')
-    treeNotes.forEach((n) => {
-      const item = treeEl('div', 'rounded-xl bg-zinc-50 dark:bg-zinc-800/60 px-3 py-2')
-      const meta = treeEl('div', 'text-[11px] text-zinc-500 dark:text-zinc-400 mb-0.5',
-        `${treeAuthorName(n.author_id)} · ${fmtRel(new Date(n.created_at).getTime())}`)
-      const text = treeEl('p', 'text-sm text-zinc-800 dark:text-zinc-100 whitespace-pre-wrap break-words', n.content)
-      item.appendChild(meta)
-      item.appendChild(text)
-      list.appendChild(item)
-    })
-    noteSection.appendChild(list)
-  }
-  body.appendChild(noteSection)
-
-  // 文件
-  const fileSection = treeEl('div', 'pt-1 border-t border-zinc-100 dark:border-zinc-800')
-  const fileHead = treeEl('div', 'flex items-center justify-between gap-2 mt-2 mb-1.5')
-  fileHead.appendChild(treeEl('p', 'text-xs font-medium text-zinc-900 dark:text-zinc-100', `文件 · ${treeNodeFiles.length}`))
-
-  const upBtn = treeEl('button', 'inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-zinc-700 active:scale-95 transition-all')
-  upBtn.type = 'button'
-  upBtn.textContent = '上传'
-  const fileInput = document.createElement('input')
-  fileInput.type = 'file'
-  fileInput.className = 'hidden'
-  upBtn.addEventListener('click', () => fileInput.click())
-  fileInput.addEventListener('change', async () => {
-    const f = fileInput.files && fileInput.files[0]
-    if (!f) return
-    await uploadNodeFile(node, f)
-    fileInput.value = ''
-  })
-  fileHead.appendChild(upBtn)
-  fileHead.appendChild(fileInput)
-  fileSection.appendChild(fileHead)
-
-  fileSection.appendChild(treeEl('p', 'text-[11px] text-zinc-400 dark:text-zinc-500 mb-1.5',
-    node.kind === 'root' ? '根节点文件可直接下载' : '同名文件可共存，按上传人区分'))
-
-  if (treeNodeFiles.length === 0) {
-    fileSection.appendChild(treeEl('p', 'text-xs text-zinc-400 dark:text-zinc-500 py-2 text-center', '还没有文件'))
-  } else {
-    const list = treeEl('div', 'space-y-1.5')
-    treeNodeFiles.forEach((f) => {
-      const item = treeEl('div', 'rounded-xl border border-zinc-100 dark:border-zinc-800 px-2.5 py-1.5')
-      const top = treeEl('div', 'flex items-start gap-2')
-      const info = treeEl('div', 'min-w-0 flex-1')
-      info.appendChild(treeEl('p', 'text-sm text-zinc-900 dark:text-zinc-100 truncate', f.name))
-      info.appendChild(treeEl('p', 'text-[11px] text-zinc-500 dark:text-zinc-400 truncate',
-        `${fmtBytes(f.size || 0)} · ${treeAuthorName(f.author_id)}${f.status === 'approved' ? ' · 已通过' : ''}`))
-      top.appendChild(info)
-      if (f.status === 'approved') top.appendChild(treeEl('span', 'px-1.5 py-0.5 rounded-md text-[10px] bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-300 shrink-0', '已入库'))
-      item.appendChild(top)
-
-      const actions = treeEl('div', 'flex items-center gap-1 mt-1')
-      const dl = document.createElement('a')
-      dl.href = f.url
-      dl.setAttribute('download', f.name)
-      dl.className = 'px-1.5 py-0.5 rounded-lg text-[11px] text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors'
-      dl.textContent = '下载'
-      const approve = treeEl('button', 'px-1.5 py-0.5 rounded-lg text-[11px] text-blue-600 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors',
-        f.status === 'approved' ? '重新入库' : '通过并入库')
-      approve.type = 'button'
-      approve.addEventListener('click', () => approveNodeFile(f))
-      const del = treeEl('button', 'ml-auto p-1 rounded-lg text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors', '×')
-      del.type = 'button'
-      del.title = '删除文件'
-      del.addEventListener('click', () => deleteNodeFile(f))
-
-      actions.appendChild(dl)
-      actions.appendChild(approve)
-      actions.appendChild(del)
-      item.appendChild(actions)
-      list.appendChild(item)
-    })
-    fileSection.appendChild(list)
-  }
-  body.appendChild(fileSection)
-
-  pop.appendChild(body)
-  updateTreePopoverPosition()
-  setTimeout(updateTreePopoverPosition, 0)
 }
 
-// ── 节点操作 ───────────────────────────────────────────────────────────
 async function uploadNodeFile(node, file) {
   const safe = file.name.replace(/[^\w.\-\u4e00-\u9fa5]/g, '_')
   const path = `nodes/${node.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safe}`
   const { data: ud, error: ue } = await supabase.storage.from('uploads').upload(path, file, {
-    cacheControl: '3600',
-    upsert: false,
-    contentType: file.type || 'application/octet-stream',
+    cacheControl: '3600', upsert: false, contentType: file.type || 'application/octet-stream',
   })
   if (ue) { treeEls.hint.textContent = '上传失败：' + ue.message; return }
   const { data: pub } = supabase.storage.from('uploads').getPublicUrl(ud.path)
-  const { error } = await supabase.from('node_files').insert({
+  const { data: row, error } = await supabase.from('node_files').insert({
     node_id: node.id,
     author_id: currentUser ? currentUser.id : null,
     name: file.name,
@@ -1201,10 +1489,9 @@ async function uploadNodeFile(node, file) {
     size: file.size,
     type: file.type || null,
     status: 'pending',
-  })
+  }).select().single()
   if (error) { treeEls.hint.textContent = '保存失败：' + error.message; return }
-  treeEls.hint.textContent = '已上传：' + file.name
-  await openTreePopover(node.id)
+  if (row) treeNodeFiles.push(row)
 }
 
 async function approveNodeFile(f) {
@@ -1221,7 +1508,6 @@ async function approveNodeFile(f) {
   if (ie) { treeEls.hint.textContent = '入库失败：' + ie.message; return }
   await supabase.from('node_files').update({ status: 'approved' }).eq('id', f.id)
   f.status = 'approved'
-
   const { data: rows } = await supabase.from('files').select('*').eq('project_id', treeProjectId).order('created_at', { ascending: false })
   if (rows) {
     files = rows
@@ -1230,30 +1516,429 @@ async function approveNodeFile(f) {
     if (typeof renderProjects === 'function') renderProjects()
   }
   treeEls.hint.textContent = '已并入项目文件：' + f.name
-  await openTreePopover(f.node_id)
-}
-
-async function deleteNodeFile(f) {
-  const ok = await confirmDialog({ title: '删除文件', message: `确定删除「${f.name}」吗？`, okText: '删除' })
-  if (!ok) return
-  await supabase.storage.from('uploads').remove([f.path])
-  await supabase.from('node_files').delete().eq('id', f.id)
-  if (treePopoverNodeId) await openTreePopover(treePopoverNodeId)
 }
 
 async function deleteTreeNode(node) {
   const ok = await confirmDialog({
     title: '删除节点',
-    message: `确定删除「${node.title}」吗？它下面的分支、想法和文件都会一起删除。`,
+    message: `确定删除「${node.title}」吗？它下面的分支、便签和附件都会一起删除。`,
     okText: '删除',
   })
   if (!ok) return
   const { error } = await supabase.from('tree_nodes').delete().eq('id', node.id)
   if (error) { treeEls.hint.textContent = '删除失败：' + error.message; return }
   treeNodes = treeNodes.filter((n) => n.id !== node.id && n.parent_id !== node.id)
+  treeNotes = treeNotes.filter((n) => n.node_id !== node.id)
   treeLinks = treeLinks.filter((l) => l.from_node !== node.id && l.to_node !== node.id)
   treeSelectedId = null
-  treePopoverNodeId = null
-  treeEls.popover.classList.add('hidden')
   renderTree()
+}
+function openNodeColorPicker(node, wrap) {
+  const old = wrap.querySelector('.node-color-pop')
+  if (old) { old.remove(); return }
+  const pop = treeEl('div', 'node-color-pop absolute z-30 flex items-center gap-1 p-1 rounded-lg bg-white dark:bg-zinc-800 shadow-lg border border-zinc-200 dark:border-zinc-700')
+  pop.style.top = '32px'
+  pop.style.left = '6px'
+  Object.keys(TREE_BORDER_COLORS).forEach((key) => {
+    const c = TREE_BORDER_COLORS[key]
+    const b = treeEl('button', 'w-4 h-4 rounded-full border border-white/60')
+    b.type = 'button'
+    b.style.background = c.value
+    b.title = c.label
+    b.addEventListener('pointerdown', (e) => e.stopPropagation())
+    b.addEventListener('click', async (e) => {
+      e.stopPropagation()
+      node.color = key
+      pop.remove()
+      renderTreeNodes()
+      const { error } = await supabase.from('tree_nodes').update({ color: key }).eq('id', node.id)
+      if (error) treeEls.hint.textContent = '保存颜色失败：' + error.message
+    })
+    pop.appendChild(b)
+  })
+  wrap.appendChild(pop)
+  setTimeout(() => {
+    const close = (ev) => {
+      if (!pop.contains(ev.target)) { pop.remove(); document.removeEventListener('pointerdown', close) }
+    }
+    document.addEventListener('pointerdown', close)
+  }, 0)
+}
+// ── 节点详情弹窗（保留的浮窗）─────────────────────────────────────────
+let treePopoverNode = null
+
+function ensureTreePopover() {
+  let el = document.getElementById('tree-popover')
+  if (el) return el
+  el = treeEl('div', 'hidden fixed z-[138] w-[330px] max-h-[70vh] overflow-y-auto rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-2xl')
+  el.id = 'tree-popover'
+  document.body.appendChild(el)
+  document.addEventListener('pointerdown', (e) => {
+    if (el.classList.contains('hidden')) return
+    if (el.contains(e.target)) return
+    if (e.target.closest && e.target.closest('[data-node-id]')) return
+    closeTreePopover()
+  })
+  return el
+}
+
+function openTreePopover(node) {
+  const el = ensureTreePopover()
+  treePopoverNode = node
+  el.classList.remove('hidden')
+  renderTreePopover(node)
+
+  const rect = treeEls.stage.getBoundingClientRect()
+  const w = TREE_WIN_W
+  let left = rect.left + treePan.x + (node.x + w / 2) * treeZoom + 52
+  let top = rect.top + treePan.y + (node.y - TREE_WIN_H / 2) * treeZoom
+  if (left + 340 > window.innerWidth - 8) {
+    left = rect.left + treePan.x + (node.x - w / 2) * treeZoom - 342
+  }
+  el.style.left = Math.max(8, left) + 'px'
+  el.style.top = Math.max(72, Math.min(top, window.innerHeight - 240)) + 'px'
+}
+
+function closeTreePopover() {
+  const el = document.getElementById('tree-popover')
+  if (el) el.classList.add('hidden')
+  treePopoverNode = null
+}
+
+function renderTreePopover(node) {
+  const el = ensureTreePopover()
+  const color = treeBorderColor(node)
+  const notes = treeNotesOf(node.id)
+  const files = treeFilesOf(node.id)
+  el.innerHTML = ''
+
+  const head = treeEl('div', 'flex items-center gap-2 px-3 py-2.5 sticky top-0 bg-white dark:bg-zinc-900 border-b border-zinc-100 dark:border-zinc-800')
+  const dot = treeEl('span', 'w-3 h-3 rounded-full shrink-0')
+  dot.style.background = color
+  const name = treeEl('p', 'text-sm font-semibold truncate flex-1 text-zinc-900 dark:text-zinc-100', node.title || '未命名')
+  const close = treeEl('button', 'p-1 rounded-lg text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800', '×')
+  close.type = 'button'
+  close.addEventListener('click', closeTreePopover)
+  head.appendChild(dot)
+  head.appendChild(name)
+  head.appendChild(close)
+  el.appendChild(head)
+
+  const bodyEl = treeEl('div', 'p-3 space-y-3')
+
+  // 边框颜色
+  const colorRow = treeEl('div', '')
+  colorRow.appendChild(treeEl('p', 'text-[11px] text-zinc-500 dark:text-zinc-400 mb-1', '边框颜色'))
+  const sw = treeEl('div', 'flex items-center gap-1.5')
+  Object.keys(TREE_BORDER_COLORS).forEach((key) => {
+    const c = TREE_BORDER_COLORS[key]
+    const b = treeEl('button', 'w-5 h-5 rounded-full transition-transform active:scale-90')
+    b.type = 'button'
+    b.style.background = c.value
+    b.style.border = node.color === key ? '2px solid #18181b' : '2px solid transparent'
+    b.title = c.label
+    b.addEventListener('click', async () => {
+      node.color = key
+      renderTreeNodes()
+      renderTreePopover(node)
+      await supabase.from('tree_nodes').update({ color: key }).eq('id', node.id)
+    })
+    sw.appendChild(b)
+  })
+  colorRow.appendChild(sw)
+  bodyEl.appendChild(colorRow)
+
+  // 便签
+  const noteSec = treeEl('div', 'pt-2 border-t border-zinc-100 dark:border-zinc-800')
+  const noteHead = treeEl('div', 'flex items-center justify-between mb-1.5')
+  noteHead.appendChild(treeEl('p', 'text-xs font-medium text-zinc-900 dark:text-zinc-100', `便签 · ${notes.length}`))
+  const addBtn = treeEl('button', 'text-[11px] text-blue-600 dark:text-blue-300 hover:underline', '+ 新建')
+  addBtn.type = 'button'
+  addBtn.addEventListener('click', () => { closeTreePopover(); openTreeNoteEditor(null, node) })
+  noteHead.appendChild(addBtn)
+  noteSec.appendChild(noteHead)
+
+  if (notes.length === 0) {
+    noteSec.appendChild(treeEl('p', 'text-[11px] text-zinc-400 dark:text-zinc-500 py-2 text-center', '还没有便签'))
+  } else {
+    notes.slice().reverse().forEach((n) => {
+      const c = NOTE_COLORS[n.color] || NOTE_COLORS.yellow
+      const item = treeEl('button', 'w-full text-left rounded-lg px-2 py-1.5 mb-1.5 last:mb-0 transition-transform hover:translate-x-0.5')
+      item.type = 'button'
+      item.style.background = c.bg
+      item.style.border = '1.5px solid ' + c.edge
+      const meta = treeEl('p', 'text-[10px] mb-0.5', treeAuthorName(n.author_id) + ' · ' + fmtRel(new Date(n.created_at).getTime()))
+      meta.style.color = c.text
+      meta.style.opacity = '0.75'
+      const text = treeEl('p', 'text-[12px] truncate', summarizeNote(n.content))
+      text.style.color = c.text
+      item.appendChild(meta)
+      item.appendChild(text)
+      item.addEventListener('click', () => { closeTreePopover(); openNoteViewer(n) })
+      noteSec.appendChild(item)
+    })
+  }
+  bodyEl.appendChild(noteSec)
+
+  // 附件
+  const fileSec = treeEl('div', 'pt-2 border-t border-zinc-100 dark:border-zinc-800')
+  const fileHead = treeEl('div', 'flex items-center justify-between mb-1.5')
+  fileHead.appendChild(treeEl('p', 'text-xs font-medium text-zinc-900 dark:text-zinc-100', `附件 · ${files.length}`))
+  const up = treeEl('button', 'text-[11px] text-blue-600 dark:text-blue-300 hover:underline', '上传')
+  up.type = 'button'
+  up.addEventListener('click', () => openTreeFiles(node))
+  fileHead.appendChild(up)
+  fileSec.appendChild(fileHead)
+
+  files.slice(0, 4).forEach((f) => {
+    const row = treeEl('div', 'flex items-center gap-2 py-0.5')
+    row.appendChild(treeEl('span', 'text-[11px] text-zinc-600 dark:text-zinc-300 truncate flex-1', f.name))
+    const dl = document.createElement('a')
+    dl.href = f.url
+    dl.setAttribute('download', f.name)
+    dl.className = 'text-[11px] text-zinc-400 hover:text-blue-500'
+    dl.textContent = '下载'
+    row.appendChild(dl)
+    fileSec.appendChild(row)
+  })
+  if (files.length === 0) fileSec.appendChild(treeEl('p', 'text-[11px] text-zinc-400 dark:text-zinc-500 py-1 text-center', '还没有附件'))
+  bodyEl.appendChild(fileSec)
+
+  el.appendChild(bodyEl)
+}
+
+// ── 便签放大弹窗 ───────────────────────────────────────────────────────
+function ensureNoteViewer() {
+  let el = document.getElementById('tree-note-view')
+  if (el) return el
+  el = treeEl('div', 'hidden fixed inset-0 z-[136] items-center justify-center bg-black/40 p-4')
+  el.id = 'tree-note-view'
+  const card = treeEl('div', 'w-full max-w-lg max-h-[80vh] overflow-auto rounded-2xl shadow-2xl')
+  card.id = 'tree-note-view-card'
+  el.appendChild(card)
+  document.body.appendChild(el)
+  el.addEventListener('pointerdown', (e) => { if (e.target === el) closeNoteViewer() })
+  return el
+}
+
+function openNoteViewer(note) {
+  const el = ensureNoteViewer()
+  const card = document.getElementById('tree-note-view-card')
+  const c = NOTE_COLORS[note.color] || NOTE_COLORS.yellow
+  card.innerHTML = ''
+  card.style.background = c.bg
+  card.style.border = '2px solid ' + c.edge
+  card.style.transform = 'scale(.86)'
+  card.style.opacity = '0'
+  card.style.transition = 'transform .18s cubic-bezier(.2,.8,.3,1), opacity .18s ease'
+
+  const head = treeEl('div', 'flex items-center gap-2 px-4 py-2.5')
+  head.style.borderBottom = '1px solid ' + c.edge
+  const who = treeEl('span', 'text-xs font-medium', treeAuthorName(note.author_id))
+  who.style.color = c.text
+  const when = treeEl('span', 'text-[11px] ml-2 opacity-70', fmtRel(new Date(note.created_at).getTime()))
+  when.style.color = c.text
+  const close = treeEl('button', 'ml-auto text-lg leading-none opacity-60 hover:opacity-100', '×')
+  close.type = 'button'
+  close.style.color = c.text
+  close.addEventListener('click', closeNoteViewer)
+  head.appendChild(who)
+  head.appendChild(when)
+  head.appendChild(close)
+
+  const bodyEl = treeEl('div', 'px-4 py-2 max-h-[52vh] overflow-auto')
+  renderNoteLines(bodyEl, note.content, note.color)
+
+  const foot = treeEl('div', 'flex items-center gap-3 px-4 py-2.5')
+  foot.style.borderTop = '1px solid ' + c.edge
+  const edit = treeEl('button', 'text-xs font-medium hover:underline', '编辑')
+  edit.type = 'button'
+  edit.style.color = c.text
+  edit.addEventListener('click', () => { closeNoteViewer(); openTreeNoteEditor(note, treeNodeById(note.node_id)) })
+  const del = treeEl('button', 'text-xs font-medium hover:underline ml-auto', '删除')
+  del.type = 'button'
+  del.style.color = '#b91c1c'
+  del.addEventListener('click', () => { closeNoteViewer(); deleteTreeNote(note) })
+  foot.appendChild(edit)
+  foot.appendChild(del)
+
+  card.appendChild(head)
+  card.appendChild(bodyEl)
+  card.appendChild(foot)
+
+  el.classList.remove('hidden')
+  el.classList.add('flex')
+  requestAnimationFrame(() => {
+    card.style.transform = 'scale(1)'
+    card.style.opacity = '1'
+  })
+}
+
+function closeNoteViewer() {
+  const el = document.getElementById('tree-note-view')
+  if (!el) return
+  el.classList.add('hidden')
+  el.classList.remove('flex')
+}
+
+// ── 便签卡片（可拖动 / 可缩放）────────────────────────────────────────
+function renderTreeNotes() {
+  const layer = treeEls.layer
+  layer.querySelectorAll('[data-note-card]').forEach((el) => el.remove())
+
+  treeNotes.forEach((note) => {
+    const c = NOTE_COLORS[note.color] || NOTE_COLORS.yellow
+    const card = treeEl('div', 'group/note absolute rounded flex flex-col transition-transform duration-200 hover:-translate-y-0.5')
+    card.dataset.noteCard = '1'
+    card.style.left = note.x + 'px'
+    card.style.top = note.y + 'px'
+    card.style.width = (note.width || 200) + 'px'
+    card.style.height = (note.height || 200) + 'px'
+    card.style.background = c.bg
+    card.style.boxShadow = '0 2px 4px rgba(0,0,0,.10), 0 8px 20px -12px rgba(0,0,0,.35)'
+    card.style.cursor = 'grab'
+
+    const inner = treeEl('div', 'flex-1 flex flex-col p-3 overflow-hidden')
+    const contentEl = treeEl('div', 'flex-1 overflow-hidden')
+    contentEl.style.fontSize = '14px'
+    contentEl.style.lineHeight = '1.55'
+    contentEl.style.color = c.text
+    contentEl.style.fontFamily = '"Segoe Print", "Bradley Hand", "Comic Sans MS", "PingFang SC", "Microsoft YaHei", sans-serif'
+    renderNotePlain(contentEl, note.content, c)
+
+    const author = treeEl('p', 'mt-2 text-[10px] opacity-60 truncate', treeAuthorName(note.author_id))
+    author.style.color = c.text
+
+    inner.appendChild(contentEl)
+    inner.appendChild(author)
+
+    const actions = treeEl('div', 'absolute top-1 right-1 hidden group-hover/note:flex items-center gap-0.5')
+    const editBtn = treeEl('button', 'w-4 h-4 rounded text-[10px] leading-none bg-white/70 hover:bg-white')
+    editBtn.type = 'button'
+    editBtn.textContent = '✎'
+    editBtn.title = '编辑'
+    editBtn.style.color = c.text
+    editBtn.addEventListener('pointerdown', (e) => e.stopPropagation())
+    editBtn.addEventListener('click', (e) => { e.stopPropagation(); openTreeNoteEditor(note, note.node_id ? treeNodeById(note.node_id) : null) })
+    const delBtn = treeEl('button', 'w-4 h-4 rounded text-[11px] leading-none bg-white/70 hover:bg-white')
+    delBtn.type = 'button'
+    delBtn.textContent = '×'
+    delBtn.title = '删除'
+    delBtn.style.color = c.text
+    delBtn.addEventListener('pointerdown', (e) => e.stopPropagation())
+    delBtn.addEventListener('click', (e) => { e.stopPropagation(); deleteTreeNote(note) })
+    actions.appendChild(editBtn)
+    actions.appendChild(delBtn)
+
+    const grip = treeEl('div', 'absolute bottom-0 right-0 w-3.5 h-3.5 cursor-nwse-resize opacity-0 group-hover/note:opacity-100')
+    grip.dataset.noteResize = '1'
+    grip.style.background = 'linear-gradient(135deg, transparent 50%, rgba(0,0,0,.22) 50%)'
+    grip.addEventListener('pointerdown', (e) => onNoteResizeDown(e, note, card))
+
+    card.appendChild(inner)
+    card.appendChild(actions)
+    card.appendChild(grip)
+
+    card.addEventListener('pointerdown', (e) => onNoteDragDown(e, note, card))
+    card.addEventListener('dblclick', (e) => {
+      e.stopPropagation()
+      openTreeNoteEditor(note, note.node_id ? treeNodeById(note.node_id) : null)
+    })
+    layer.appendChild(card)
+  })
+}
+
+function renderNotePlain(container, content, c) {
+  const lines = String(content || '').split('\n')
+  lines.forEach((line) => {
+    const img = line.match(/^!\[[^\]]*\]\(([^)]+)\)\s*$/)
+    if (img) {
+      const el = document.createElement('img')
+      el.src = img[1]
+      el.style.maxWidth = '100%'
+      el.style.borderRadius = '2px'
+      el.style.margin = '4px 0'
+      container.appendChild(el)
+      return
+    }
+    const p = document.createElement('p')
+    p.style.margin = '0'
+    p.style.whiteSpace = 'pre-wrap'
+    p.style.wordBreak = 'break-word'
+    p.innerHTML = escapeHtml(line).replace(/==([^=]+)==/g, '<mark style="background:linear-gradient(180deg,transparent 45%,rgba(255,255,255,.72) 45%,rgba(255,255,255,.72) 92%,transparent 92%);color:inherit;padding:0">$1</mark>')
+    container.appendChild(p)
+  })
+}
+
+function onNoteDragDown(e, note, card) {
+  if (e.button !== 0) return
+  e.stopPropagation()
+  e.preventDefault()
+  const sx = e.clientX
+  const sy = e.clientY
+  const nx = note.x
+  const ny = note.y
+  let moved = false
+
+  const onMove = (ev) => {
+    const dx = (ev.clientX - sx) / treeZoom
+    const dy = (ev.clientY - sy) / treeZoom
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) moved = true
+    note.x = nx + dx
+    note.y = ny + dy
+    card.style.left = note.x + 'px'
+    card.style.top = note.y + 'px'
+  }
+  const onUp = async () => {
+    window.removeEventListener('pointermove', onMove)
+    window.removeEventListener('pointerup', onUp)
+    if (moved) await supabase.from('node_notes').update({ x: note.x, y: note.y }).eq('id', note.id)
+  }
+  window.addEventListener('pointermove', onMove)
+  window.addEventListener('pointerup', onUp)
+}
+
+function onNoteResizeDown(e, note, card) {
+  if (e.button !== 0) return
+  e.stopPropagation()
+  e.preventDefault()
+  const sx = e.clientX
+  const sy = e.clientY
+  const w0 = note.width || 200
+  const h0 = note.height || 150
+
+  const onMove = (ev) => {
+    note.width = Math.round(Math.max(140, Math.min(560, w0 + (ev.clientX - sx) / treeZoom)))
+    note.height = Math.round(Math.max(90, Math.min(460, h0 + (ev.clientY - sy) / treeZoom)))
+    card.style.width = note.width + 'px'
+    card.style.height = note.height + 'px'
+  }
+  const onUp = async () => {
+    window.removeEventListener('pointermove', onMove)
+    window.removeEventListener('pointerup', onUp)
+    await supabase.from('node_notes').update({ width: note.width, height: note.height }).eq('id', note.id)
+  }
+  window.addEventListener('pointermove', onMove)
+  window.addEventListener('pointerup', onUp)
+}
+
+
+// 节点附件 -> 站内预览（复用 20-preview.js 的 openPreview，代码文件会高亮）
+function previewNodeFile(f) {
+  if (!f || !f.url) return
+  const view = {
+    id: f.id,
+    name: f.name,
+    url: f.url,
+    size: f.size,
+    type: f.type || '',
+    category: guessCategory(f.name),
+    path: f.path,
+  }
+  if (typeof openPreview === 'function') {
+    const modal = document.getElementById('preview-modal')
+    if (modal) modal.style.zIndex = '140'
+    openPreview(view)
+  }
+  else window.open(f.url, '_blank', 'noopener')
 }
