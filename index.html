@@ -1050,10 +1050,10 @@
       </div>
     </div>
 
-    <!-- Supabase 是唯一的 ES Module 依赖：用动态 import 先发起加载（不阻塞解析），
-         业务脚本用 defer 并行下载，启动时由 99-boot.js 等待 SDK 就绪 -->
+    <!-- Supabase SDK 本地托管（assets/vendor/supabase.bundle.mjs），不依赖任何 CDN。
+         国内手机网络经常连不上 jsdelivr，本地文件可以彻底避开这个问题 -->
     <script>
-      window.__sbReady = import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm')
+      window.__sbReady = import('./assets/vendor/supabase.bundle.mjs')
         .then(function (m) { window.__sbCreateClient = m.createClient })
     </script>
 
