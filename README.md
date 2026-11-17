@@ -4,6 +4,13 @@
 
 纯静态前端（HTML + 原生 JS），后端用 [Supabase](https://supabase.com)（Postgres + Auth + Storage + Edge Function）。
 
+## 功能
+
+工作台 · 项目 · 任务 · 文件 · 好友 · 日程 · AI 助手。
+
+**项目文件**：每个项目自带一个文件仓库（类似 GitHub 仓库），项目成员可以上传任意文件，
+代码文件（.c / .py / .js / .md …）点开即可在站内查看，带语法高亮、行号和复制按钮。
+
 ## 目录
 
 ```
@@ -33,6 +40,12 @@ python -m http.server 8000
 - 推送 `main` 分支后 Vercel 自动构建部署
 - 需要上传的文件：`index.html`、`assets/`、`js/`、`whale.png`
 - **不要**提交 `.history/`（已在 `.gitignore` 里）
+
+## 数据库变更
+
+结构改动放在 `supabase/migrations/`，需要在 Supabase Dashboard → SQL Editor 手动执行一次：
+
+- `20261117_project_files.sql` —— `files` 表增加 `project_id` / `uploaded_by`（项目文件功能依赖）
 
 ## 账号与登录
 

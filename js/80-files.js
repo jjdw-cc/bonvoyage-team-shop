@@ -141,19 +141,31 @@ function renderFileCategories() {
   })
 }
 
-function openFileModal() {
+// 目标项目：null 表示上传到全局文件库；有值表示上传到某个项目（项目详情页触发）
+let pendingProjectId = null
+const fileModalTitle = document.getElementById('file-modal-title')
+
+function openFileModal(projectId, projectName) {
   if (!currentUser) { openUserModal(); return }
+  pendingProjectId = projectId || null
   pendingFile = null; fileInput.value = ''
+  fileModalTitle.textContent = pendingProjectId ? '上传到项目' : '上传文件'
   fileSelectedName.textContent = '点击选择文件'
-  fileSelectedSize.textContent = '支持任意格式'
+  fileSelectedSize.textContent = pendingProjectId
+    ? `项目：${projectName || '当前项目'}`
+    : '支持任意格式'
   fileMessage.textContent = ''; fileMessage.className = 'hidden text-sm mb-4'
   fileSubmit.disabled = true
   pendingCategory = '其他'; renderFileCategories()
   fileModal.classList.remove('hidden'); syncBodyScroll()
 }
-function closeFileModal() { fileModal.classList.add('hidden'); syncBodyScroll() }
+function closeFileModal() {
+  fileModal.classList.add('hidden')
+  pendingProjectId = null
+  syncBodyScroll()
+}
 
-fileUploadOpen.addEventListener('click', openFileModal)
+fileUploadOpen.addEventListener('click', () => openFileModal())
 fileClose.addEventListener('click', closeFileModal)
 fileBackdrop.addEventListener('click', closeFileModal)
 
@@ -170,16 +182,35 @@ fileInput.addEventListener('change', () => {
 
 fileSubmit.addEventListener('click', async () => {
   if (!pendingFile) return
+  const targetProject = pendingProjectId
   fileSubmit.disabled = true; fileSubmit.textContent = '上传中...'
   const safeName = pendingFile.name.replace(/[^\w.\-\u4e00-\u9fa5]/g, '_')
   const path = `files/${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safeName}`
   const { data: ud, error: ue } = await supabase.storage.from('uploads').upload(path, pendingFile, { cacheControl: '3600', upsert: false, contentType: pendingFile.type || 'application/octet-stream' })
   if (ue) { fileSubmit.disabled = false; fileSubmit.textContent = '上传'; fileMessage.textContent = `上传失败：${ue.message}`; fileMessage.className = 'text-sm mb-4 text-red-500'; return }
   const { data: u } = supabase.storage.from('uploads').getPublicUrl(ud.path)
-  const { data: row, error: de } = await supabase.from('files').insert({ name: pendingFile.name, category: pendingCategory, path: ud.path, url: u.publicUrl, size: pendingFile.size, type: pendingFile.type || null }).select().single()
+  const { data: row, error: de } = await supabase.from('files').insert({
+    name: pendingFile.name,
+    category: pendingCategory,
+    path: ud.path,
+    url: u.publicUrl,
+    size: pendingFile.size,
+    type: pendingFile.type || null,
+    project_id: targetProject,
+    uploaded_by: currentUser ? currentUser.id : null,
+  }).select().single()
   fileSubmit.disabled = false; fileSubmit.textContent = '上传'
-  if (de) { fileMessage.textContent = `保存失败：${de.message}`; fileMessage.className = 'text-sm mb-4 text-red-500'; return }
-  files.unshift(row); renderFiles(); updateFileStats(); closeFileModal()
+  if (de) {
+    const missingColumn = /project_id|uploaded_by|column .* does not exist/i.test(de.message || '')
+    fileMessage.textContent = missingColumn
+      ? `保存失败：数据库还缺少字段，请先在 Supabase SQL Editor 执行 supabase/migrations/20261117_project_files.sql`
+      : `保存失败：${de.message}`
+    fileMessage.className = 'text-sm mb-4 text-red-500'
+    return
+  }
+  files.unshift(row); renderFiles(); updateFileStats()
+  closeFileModal()
+  if (targetProject) renderProjects()
 })
 
 async function loadStorageUsage() {

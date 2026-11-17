@@ -36,6 +36,95 @@ function isTextFile(file) {
   if ((file.type || '').startsWith('text/')) return true
   return /\.(txt|md|markdown|json|xml|yml|yaml|html|htm|css|scss|less|js|mjs|cjs|ts|tsx|jsx|py|java|c|cpp|h|hpp|go|rs|php|rb|sh|bash|log|csv|ini|conf|env|sql)$/i.test(file.name)
 }
+
+// ── 代码查看器 ────────────────────────────────────────────────────────
+const PREVIEW_LANGS = {
+  js: 'javascript', mjs: 'javascript', cjs: 'javascript', jsx: 'javascript',
+  ts: 'typescript', tsx: 'typescript', py: 'python', java: 'java',
+  c: 'c', h: 'c', cpp: 'cpp', cc: 'cpp', hpp: 'cpp',
+  go: 'go', rs: 'rust', php: 'php', rb: 'ruby',
+  sh: 'bash', bash: 'bash', zsh: 'bash',
+  html: 'xml', htm: 'xml', xml: 'xml', svg: 'xml',
+  css: 'css', scss: 'scss', less: 'less',
+  json: 'json', yml: 'yaml', yaml: 'yaml', toml: 'ini', ini: 'ini', conf: 'ini', env: 'ini',
+  md: 'markdown', markdown: 'markdown', sql: 'sql', csv: 'plaintext', txt: 'plaintext', log: 'plaintext',
+}
+
+function previewExt(name) {
+  const m = String(name || '').toLowerCase().match(/\.([a-z0-9]+)$/)
+  return m ? m[1] : ''
+}
+
+function escapePreviewHtml(s) {
+  return s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]))
+}
+
+function buildCodeView(raw, fileName) {
+  const ext = previewExt(fileName)
+  const lang = PREVIEW_LANGS[ext] || ''
+
+  let html = null
+  if (typeof hljs !== 'undefined' && lang && lang !== 'plaintext') {
+    try { html = hljs.highlight(raw, { language: lang }).value } catch (_) { html = null }
+  }
+  if (html === null) html = escapePreviewHtml(raw)
+
+  const lineCount = raw.split('\n').length
+
+  const wrap = document.createElement('div')
+  wrap.className = 'w-full min-h-[55vh] flex flex-col rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900'
+
+  const bar = document.createElement('div')
+  bar.className = 'flex items-center justify-between gap-3 px-3 py-2 border-b border-zinc-200 dark:border-zinc-800 shrink-0'
+
+  const left = document.createElement('div')
+  left.className = 'flex items-center gap-2 min-w-0'
+  left.innerHTML =
+    `<span class="px-2 py-0.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 text-xs font-mono">${escapePreviewHtml(lang || ext || 'text')}</span>` +
+    `<span class="text-xs text-zinc-400 dark:text-zinc-500">${lineCount} 行</span>` +
+    (typeof hljs === 'undefined' ? '<span class="text-xs text-amber-500">（高亮组件未加载，显示纯文本）</span>' : '')
+
+  const copyBtn = document.createElement('button')
+  copyBtn.type = 'button'
+  copyBtn.className = 'shrink-0 px-2.5 py-1 rounded-lg text-xs font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 active:scale-95 transition-all duration-200'
+  copyBtn.textContent = '复制'
+  copyBtn.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(raw)
+      copyBtn.textContent = '已复制'
+    } catch (_) {
+      copyBtn.textContent = '复制失败'
+    }
+    setTimeout(() => { copyBtn.textContent = '复制' }, 1500)
+  })
+
+  bar.appendChild(left)
+  bar.appendChild(copyBtn)
+
+  const scroll = document.createElement('div')
+  scroll.className = 'flex-1 overflow-auto max-h-[70vh]'
+
+  const inner = document.createElement('div')
+  inner.className = 'flex min-w-max'
+
+  const gutter = document.createElement('div')
+  gutter.className = 'sticky left-0 z-10 shrink-0 select-none whitespace-pre bg-zinc-50 dark:bg-zinc-900 px-3 py-3 text-right font-mono text-xs leading-5 text-zinc-400 dark:text-zinc-600 border-r border-zinc-100 dark:border-zinc-800'
+  gutter.textContent = Array.from({ length: lineCount }, (_, i) => i + 1).join('\n')
+
+  const pre = document.createElement('pre')
+  pre.className = 'm-0 py-3 px-4 font-mono text-xs leading-5 whitespace-pre text-zinc-800 dark:text-zinc-200'
+  const code = document.createElement('code')
+  code.className = 'hljs bg-transparent'
+  code.innerHTML = html
+  pre.appendChild(code)
+
+  inner.appendChild(gutter)
+  inner.appendChild(pre)
+  scroll.appendChild(inner)
+  wrap.appendChild(bar)
+  wrap.appendChild(scroll)
+  return wrap
+}
 function resetPreviewBody() {
   previewBody.classList.add('items-center', 'justify-center')
   previewBody.innerHTML = ''
@@ -70,21 +159,22 @@ async function openPreview(file) {
   }
   if (isTextFile(file)) {
     previewBody.classList.remove('items-center', 'justify-center')
-    const wrap = document.createElement('div')
-    wrap.className = 'w-full max-w-3xl bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-100 dark:border-zinc-800 p-4'
-    const pre = document.createElement('pre')
-    pre.className = 'text-xs md:text-sm font-mono whitespace-pre-wrap break-words text-zinc-800 dark:text-zinc-200'
-    pre.textContent = '加载中...'
-    wrap.appendChild(pre)
-    previewBody.appendChild(wrap)
+    const holder = document.createElement('div')
+    holder.className = 'w-full text-sm text-zinc-400 dark:text-zinc-500 py-10 text-center'
+    holder.textContent = '加载中...'
+    previewBody.appendChild(holder)
     try {
       const res = await fetch(file.url)
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const text = await res.text()
+      let text = await res.text()
       const MAX = 200000
-      pre.textContent = text.length > MAX ? text.slice(0, MAX) + '\n\n... (内容过长，已截断，请下载查看完整文件)' : text
+      if (text.length > MAX) text = text.slice(0, MAX) + '\n\n... (内容过长，已截断，请下载查看完整文件)'
+      holder.replaceWith(buildCodeView(text, file.name))
     } catch (err) {
-      pre.textContent = `无法加载文件内容：${err.message}\n\n请点击右上角「下载」或「新标签打开」查看。`
+      holder.className = 'w-full max-w-3xl'
+      holder.innerHTML =
+        `<div class="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4 text-sm text-zinc-600 dark:text-zinc-400">` +
+        `无法加载文件内容：${escapePreviewHtml(err.message)}<br><span class="text-xs text-zinc-400 dark:text-zinc-500">请点击右上角「下载」或「新标签打开」查看。</span></div>`
     }
     return
   }

@@ -115,8 +115,12 @@ function renderProjectDetail() {
     if (!ok) return
     await supabase.from('projects').delete().eq('id', proj.id)
     projects = projects.filter((x) => x.id !== proj.id)
+    // 项目删除后，其文件在数据库里 project_id 被置空（on delete set null），本地同步一下
+    files = files.map((f) => (f.project_id === proj.id ? { ...f, project_id: null } : f))
     if (activeProjectId === proj.id) activeProjectId = projects[0]?.id || null
     renderProjects()
+    renderFiles()
+    updateFileStats()
   })
   headActions.appendChild(editBtn); headActions.appendChild(delBtn)
   head.appendChild(info); head.appendChild(headActions)
@@ -137,6 +141,7 @@ function renderProjectDetail() {
   }
   stats.appendChild(mkStat('研究方向', proj.research_field || '未填写'))
   stats.appendChild(mkStat('创建时间', fmtDateTime(proj.created_at)))
+  stats.appendChild(mkStat('文件', `${projectFilesOf(proj.id).length} 个`))
   stats.appendChild(mkStat('邀请人数', `${(proj.invitees || []).length} 人`))
   projectDetail.appendChild(stats)
 
@@ -164,6 +169,9 @@ function renderProjectDetail() {
   }
   inviteSection.appendChild(chipWrap)
   projectDetail.appendChild(inviteSection)
+
+  // 项目文件区（55-project-files.js）
+  renderProjectFilesSection(projectDetail, proj)
 }
 
 function renderDraftInvitees() {
