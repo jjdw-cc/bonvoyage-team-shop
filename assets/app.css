@@ -1,0 +1,26 @@
+/* 三人协作 · 全局样式（原 index.html 内联 <style> 抽出） */
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      transition-duration: 0.01ms !important;
+      animation-duration: 0.01ms !important;
+    }
+  }
+  .backdrop-blur-sm, .backdrop-blur {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+  #sidebar { contain: layout style; }
+  #ai-panel { contain: layout style paint; }
+  @media (hover: none) {
+    .group:hover { transform: none !important; }
+  }
+  .ai-code-block pre {
+    white-space: pre !important;
+    overflow-x: auto;
+    margin: 0;
+  }
+  .ai-code-block code {
+    background: transparent !important;
+    padding: 0 !important;
+  }

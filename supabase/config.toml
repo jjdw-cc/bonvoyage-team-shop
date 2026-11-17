@@ -1,0 +1,7 @@
+# Supabase CLI 配置（只保留本项目需要的部分）
+project_id = "xmyhgelfuxlvzpxqoaer"
+
+# QQ 登录中转函数：前端用 publishable key 调用，函数内部靠 code + AppKey 校验，
+# 因此关闭 JWT 验证（等价于 deploy 时的 --no-verify-jwt）
+[functions.qq-auth]
+verify_jwt = false
