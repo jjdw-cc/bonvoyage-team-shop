@@ -343,7 +343,13 @@ async function loadTree() {
 }
 
 async function loadAllNotes() {
-  const { data } = await supabase.from('node_notes').select('*').eq('project_id', treeProjectId).order('created_at', { ascending: true })
+  const ids = treeNodes.map((n) => n.id)
+  let q = supabase.from('node_notes').select('*').order('created_at', { ascending: true })
+  // 兼容历史便签：没有 project_id 的，只要挂在当前项目的节点下也读出来
+  q = ids.length
+    ? q.or(`project_id.eq.${treeProjectId},node_id.in.(${ids.join(',')})`)
+    : q.eq('project_id', treeProjectId)
+  const { data } = await q
   treeNotes = data || []
   treeNotes.forEach((n, i) => {
     if (n.x == null || n.y == null) {
@@ -595,7 +601,8 @@ function onNodeResizeDown(e, node, wrapEl) {
 
 function renderTreeNodes() {
   const layer = treeEls.layer
-  layer.innerHTML = ''
+  // 只清节点，保留便签卡片（否则重绘节点会把便签一起清掉）
+  layer.querySelectorAll('[data-node-id]').forEach((el) => el.remove())
 
   treeNodes.forEach((node) => {
     const color = treeBorderColor(node)
@@ -1221,6 +1228,12 @@ function fitTreeView() {
     minY = Math.min(minY, n.y - nodeEffH(n) / 2)
     maxY = Math.max(maxY, n.y + nodeEffH(n) / 2)
   })
+  treeNotes.forEach((n) => {
+    minX = Math.min(minX, n.x)
+    maxX = Math.max(maxX, n.x + (n.width || 200))
+    minY = Math.min(minY, n.y)
+    maxY = Math.max(maxY, n.y + (n.height || 200))
+  })
   const w = Math.max(1, maxX - minX)
   const h = Math.max(1, maxY - minY)
   const rect = treeEls.stage.getBoundingClientRect()
@@ -1571,7 +1584,7 @@ async function saveTreeNote(ed) {
   }
   closeTreeNoteEditor()
   await loadTreeProfiles()
-  renderTreeNodes()
+  renderTree()
   if (treePopoverNode) renderTreePopover(treePopoverNode)
   treeEls.hint.textContent = '便签已保存'
 }
