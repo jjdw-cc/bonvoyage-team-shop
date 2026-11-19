@@ -27,7 +27,21 @@ comment on column public.files.uploaded_by is '上传者 user id';
 -- 20261118_project_tree.sql
 -- ─────────────────────────────────────────────
 -- 知识树 / 记忆节点图
--- 在 Supabase Dashboard → SQL Editor 执行一次，幂等。·
+-- 在 Supabase Dashboard → SQL Editor 执行一次，幂等。
+
+-- 节点：kind = root（主根）| node（分支）
+create table if not exists public.tree_nodes (
+  id          uuid primary key default gen_random_uuid(),
+  project_id  uuid not null references public.projects(id) on delete cascade,
+  parent_id   uuid references public.tree_nodes(id) on delete cascade,
+  title       text not null default '未命名节点',
+  shape       text not null default 'rect',       -- rect | pill | hex | diamond
+  x           double precision not null default 0,
+  y           double precision not null default 0,
+  kind        text not null default 'node',
+  created_by  uuid references auth.users(id) on delete set null,
+  created_at  timestamptz not null default now()
+);
 
 -- 跨树连线：不同主根下的节点可以互连
 create table if not exists public.tree_links (
@@ -181,5 +195,23 @@ update public.node_notes n
 set project_id = t.project_id
 from public.tree_nodes t
 where n.node_id = t.id and n.project_id is null;
+
+-- ─────────────────────────────────────────────
+-- 20261122_node_description.sql
+-- ─────────────────────────────────────────────
+-- 节点功能简述
+alter table public.tree_nodes
+  add column if not exists description text;
+
+comment on column public.tree_nodes.description is '节点功能简述，只有创建人可以编辑';
+
+-- ─────────────────────────────────────────────
+-- 20261123_node_collapsed.sql
+-- ─────────────────────────────────────────────
+-- 节点功能块的折叠状态（所有人共享）
+alter table public.tree_nodes
+  add column if not exists collapsed jsonb default '{}'::jsonb;
+
+comment on column public.tree_nodes.collapsed is '功能块折叠状态：{"notes":true,"files":false}';
 
 notify pgrst, 'reload schema';
